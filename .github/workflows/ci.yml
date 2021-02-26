@@ -26,6 +26,7 @@ jobs:
             kind: release
           - os: windows-2019
             kind: release
+
     steps:
     - name: Clone repo
       uses: actions/checkout@v2
@@ -56,3 +57,13 @@ jobs:
     - name: Build release
       if: matrix.kind == 'release'
       run: cargo build --release --locked --all-targets -vv
+
+    - name: Test debug
+      if: matrix.kind == 'debug'
+      run: |
+        cargo test --locked --doc
+        cargo test --locked --all-targets
+
+    - name: Test release
+      if: matrix.kind == 'release'
+      run: cargo test --release --locked --all-targets

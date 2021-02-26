@@ -60,9 +60,7 @@ jobs:
 
     - name: Test debug
       if: matrix.kind == 'debug'
-      run: |
-        cargo test --locked --doc
-        cargo test --locked
+      run: cargo test --locked --all-targets
 
     - name: Test release
       if: matrix.kind == 'release'

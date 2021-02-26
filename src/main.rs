@@ -133,7 +133,7 @@ mod tests {
   #[test]
   fn font_map_contains() {
     let font_map = get_font_map().unwrap();
-    eprintln!("{:#?}", font_map);
+    println!("{:#?}", font_map);
     assert!(font_map.contains_key(&String::from("Helvetica")))
   }
 

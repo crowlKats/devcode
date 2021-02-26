@@ -67,15 +67,15 @@ jobs:
         path: target/release/devcode*
 
     - name: Install Montserrat (Ubuntu)
-      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'Ubuntu')
-      run: wget $MONTSERRAT_URL -P /usr/share/fonts
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'ubuntu')
+      run: wget $MONTSERRAT_URL -P /usr/share/fonts/Montserrat-Regular.ttf
 
     - name: Install Montserrat (Mac)
-      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'Mac')
-      run: wget $MONTSERRAT_URL -P ~/Library/Fonts
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'macos')
+      run: wget $MONTSERRAT_URL -P ~/Library/Fonts/Montserrat-Regular.ttf
 
     - name: Install Montserrat (Windows)
-      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'Windows')
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'windows')
       run: |
         $client = new-object System.Net.WebClient
         $client.DownloadFile(${env:$MONTSERRAT_URL},"C:\Windows\Fonts\Montserrat.ttf")

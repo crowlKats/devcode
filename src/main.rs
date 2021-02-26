@@ -75,9 +75,9 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
   let fonts = {
     #[cfg(target_os = "macos")]
     {
-      let path = std::path::Path::new("/Library/Fonts/");
+      let path = std::path::Path::new("/Library/Fonts");
       let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
-      let path = std::path::Path::new("/System/Library/Fonts/");
+      let path = std::path::Path::new("/System/Library/Fonts");
       extend_fonts!(fonts, path);
       let expanded_path = shellexpand::tilde("~/Library/Fonts");
       let expanded_path = expanded_path.to_string();
@@ -143,12 +143,12 @@ mod tests {
   fn font_map_contains() {
     let font_map = get_font_map().unwrap();
     println!("{:#?}", font_map);
-    assert!(font_map.contains_key(&String::from("Helvetica")))
+    assert!(font_map.contains_key(&String::from("Montserrat-Regular")))
   }
 
   #[test]
   fn get_specific_font() {
-    assert!(get_font(Some(&String::from("Helvetica"))).is_ok())
+    assert!(get_font(Some(&String::from("Montserrat-Regular"))).is_ok())
   }
   #[test]
   fn get_first_font() {

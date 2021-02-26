@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  MONTSERRAT_URL: 'https://github.com/JulietaUla/Montserrat/blob/master/fonts/ttf/Montserrat-Regular.ttf?raw=true'
 
 jobs:
   build:
@@ -65,10 +66,24 @@ jobs:
         name: devcode_${{ matrix.os }}
         path: target/release/devcode*
 
+    - name: Install Montserrat (Ubuntu)
+      if: matrix.kind == 'debug' || matrix.kind == 'release'
+      run: wget $MONTSERRAT_URL -P /usr/share/fonts
+
+    - name: Install Montserrat (Mac)
+      if: matrix.kind == 'debug' || matrix.kind == 'release'
+      run: wget $MONTSERRAT_URL -P ~/Library/Fonts
+
+    - name: Install Montserrat (Windows)
+      if: matrix.kind == 'debug' || matrix.kind == 'release'
+      run: |
+        $client = new-object System.Net.WebClient
+        $client.DownloadFile("${env:$MONTSERRAT_URL}","C:\Windows\Fonts\Montserrat.ttf")
+
     - name: Test debug
       if: matrix.kind == 'debug'
       run: cargo test --locked --all-targets -- --show-output
 
     - name: Test release
       if: matrix.kind == 'release'
-      run: cargo test --release --locked --all-targets
+      run: cargo test --release --locked --all-targets -- --show-output

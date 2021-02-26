@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 mod renderer;
 
 use std::collections::HashMap;
@@ -7,7 +9,9 @@ use wgpu_glyph::ab_glyph;
 fn main() -> Result<(), anyhow::Error> {
   let args: Vec<String> = std::env::args().collect();
 
-  let file = args.get(1).ok_or(anyhow::anyhow!("no file provided"))?;
+  let file = args
+    .get(1)
+    .ok_or_else(|| anyhow::anyhow!("no file provided"))?;
   let filepath = std::path::PathBuf::from(file);
   if !filepath.exists() {
     anyhow::bail!("path doesn't exist");
@@ -69,13 +73,40 @@ fn main() -> Result<(), anyhow::Error> {
     let font = args
       .get(2)
       .and_then(|font| fonts.get(font))
-      .unwrap_or(fonts.values().next().unwrap());
+      .unwrap_or_else(|| fonts.values().next().unwrap());
     let font_data = std::fs::read(font)?;
 
     ab_glyph::FontArc::try_from_vec(font_data)?
   };
 
-  let mut render_instance = renderer::Renderer::new(font, text);
+  let event_loop = winit::event_loop::EventLoop::new();
+  let mut ren = renderer::Renderer::new(&event_loop, font, text);
 
-  Ok(render_instance.run())
+  ren.window.request_redraw();
+
+  event_loop.run(move |event, _, control_flow| match event {
+    winit::event::Event::WindowEvent {
+      event: winit::event::WindowEvent::CloseRequested,
+      ..
+    } => *control_flow = winit::event_loop::ControlFlow::Exit,
+    winit::event::Event::WindowEvent {
+      event: winit::event::WindowEvent::Resized(size),
+      ..
+    } => {
+      ren.size = size;
+
+      ren.swap_chain = ren.device.create_swap_chain(
+        &ren.surface,
+        &wgpu::SwapChainDescriptor {
+          usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+          format: renderer::RENDER_FORMAT,
+          width: ren.size.width,
+          height: ren.size.height,
+          present_mode: wgpu::PresentMode::Mailbox,
+        },
+      );
+    }
+    winit::event::Event::RedrawRequested(_) => ren.redraw().unwrap(),
+    _ => *control_flow = winit::event_loop::ControlFlow::Wait,
+  });
 }

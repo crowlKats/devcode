@@ -1,30 +1,32 @@
 use futures::task::SpawnExt;
 use wgpu_glyph::{Region, Section, Text};
-use winit::event_loop::EventLoop;
 
 pub struct Renderer {
-  event_loop: EventLoop<()>,
-  window: winit::window::Window,
-  surface: wgpu::Surface,
-  size: winit::dpi::PhysicalSize<u32>,
-  device: wgpu::Device,
-  queue: wgpu::Queue,
-  swap_chain: wgpu::SwapChain,
-  staging_belt: wgpu::util::StagingBelt,
-  local_spawner: futures::executor::LocalSpawner,
-  local_pool: futures::executor::LocalPool,
-  glyph_brush: wgpu_glyph::GlyphBrush<()>,
-  text: String,
+  pub window: winit::window::Window,
+  pub surface: wgpu::Surface,
+  pub size: winit::dpi::PhysicalSize<u32>,
+  pub device: wgpu::Device,
+  pub queue: wgpu::Queue,
+  pub swap_chain: wgpu::SwapChain,
+  pub staging_belt: wgpu::util::StagingBelt,
+  pub local_spawner: futures::executor::LocalSpawner,
+  pub local_pool: futures::executor::LocalPool,
+  pub glyph_brush: wgpu_glyph::GlyphBrush<()>,
+  pub text: String,
 }
 
-const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
+pub(crate) const RENDER_FORMAT: wgpu::TextureFormat =
+  wgpu::TextureFormat::Bgra8UnormSrgb;
 
 impl Renderer {
-  pub fn new(font: wgpu_glyph::ab_glyph::FontArc, text: String) -> Self {
-    let event_loop = EventLoop::new();
+  pub fn new(
+    event_loop: &winit::event_loop::EventLoop<()>,
+    font: wgpu_glyph::ab_glyph::FontArc,
+    text: String,
+  ) -> Self {
     let window = winit::window::WindowBuilder::new()
       .with_title(env!("CARGO_CRATE_NAME"))
-      .build(&event_loop)
+      .build(event_loop)
       .unwrap();
     let instance = wgpu::Instance::new(wgpu::BackendBit::all());
 
@@ -63,7 +65,6 @@ impl Renderer {
       .build(&device, RENDER_FORMAT);
 
     Self {
-      event_loop,
       window,
       surface,
       size,
@@ -78,39 +79,7 @@ impl Renderer {
     }
   }
 
-  pub fn run(&mut self) -> () {
-    self.window.request_redraw();
-
-    self
-      .event_loop
-      .run(move |event, _, control_flow| match event {
-        winit::event::Event::WindowEvent {
-          event: winit::event::WindowEvent::CloseRequested,
-          ..
-        } => *control_flow = winit::event_loop::ControlFlow::Exit,
-        winit::event::Event::WindowEvent {
-          event: winit::event::WindowEvent::Resized(size),
-          ..
-        } => {
-          self.size = size;
-
-          self.swap_chain = self.device.create_swap_chain(
-            &self.surface,
-            &wgpu::SwapChainDescriptor {
-              usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-              format: RENDER_FORMAT,
-              width: self.size.width,
-              height: self.size.height,
-              present_mode: wgpu::PresentMode::Mailbox,
-            },
-          );
-        }
-        winit::event::Event::RedrawRequested(_) => self.redraw().unwrap(),
-        _ => *control_flow = winit::event_loop::ControlFlow::Wait,
-      });
-  }
-
-  fn redraw(&mut self) -> Result<(), anyhow::Error> {
+  pub fn redraw(&mut self) -> Result<(), anyhow::Error> {
     let mut encoder =
       self
         .device

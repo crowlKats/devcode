@@ -141,9 +141,9 @@ mod tests {
 
   #[test]
   fn font_map_contains() {
-    assert!(get_font_map()
-      .unwrap()
-      .contains_key(&String::from("Helvetica")))
+    let font_map = get_font_map().unwrap();
+    println!("{:#?}", font_map);
+    assert!(font_map.contains_key(&String::from("Helvetica")))
   }
 
   #[test]

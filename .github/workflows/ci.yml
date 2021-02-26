@@ -1,0 +1,60 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.kind }} ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            kind: lint
+          - os: ubuntu-latest
+            kind: debug
+          - os: ubuntu-latest
+            kind: release
+          - os: macos-10.15
+            kind: release
+          - os: windows-2019
+            kind: release
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: 1.50.0
+        
+    - name: Install clippy and rustfmt
+      if: matrix.kind == 'lint'
+      run: |
+        rustup component add clippy
+        rustup component add rustfmt
+        
+    - name: lint
+      if: matrix.kind == 'lint'
+      run: cargo clippy -- -D clippy::all
+
+    - name: check fmt
+      if: matrix.kind == 'lint'
+      run: cargo fmt -- --check
+
+    - name: check fmt
+      if: matrix.kind == 'lint'
+      run: cargo fmt -- --check
+
+    - name: Build debug
+      if: matrix.kind == 'debug'
+      run: cargo build --locked --all-targets
+        
+    - name: Build release
+      if: matrix.kind == 'release'
+      run: cargo build --release --locked --all-targets -vv

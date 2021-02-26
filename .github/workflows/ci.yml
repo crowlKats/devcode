@@ -68,11 +68,11 @@ jobs:
 
     - name: Install Montserrat (Ubuntu)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'ubuntu')
-      run: wget $MONTSERRAT_URL -P /usr/share/fonts/Montserrat-Regular.ttf
+      run: wget $MONTSERRAT_URL -O Montserrat-Regular.ttf -P /usr/share/fonts
 
     - name: Install Montserrat (Mac)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'macos')
-      run: wget $MONTSERRAT_URL -P ~/Library/Fonts/Montserrat-Regular.ttf
+      run: wget $MONTSERRAT_URL -O Montserrat-Regular.ttf -P ~/Library/Fonts
 
     - name: Install Montserrat (Windows)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'windows')

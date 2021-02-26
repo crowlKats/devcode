@@ -4,7 +4,7 @@ mod renderer;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use winit::event::WindowEvent;
+use winit::event::{MouseScrollDelta, WindowEvent};
 
 fn main() -> Result<(), anyhow::Error> {
   let args: Vec<String> = std::env::args().collect();
@@ -36,7 +36,24 @@ fn main() -> Result<(), anyhow::Error> {
         ren.window.request_redraw();
       }
       WindowEvent::CloseRequested => {
-        *control_flow = winit::event_loop::ControlFlow::Exit
+        *control_flow = winit::event_loop::ControlFlow::Exit;
+      }
+      WindowEvent::MouseWheel { delta, .. } => {
+        match delta {
+          MouseScrollDelta::LineDelta(x, y) => {
+            ren.offset = renderer::Offset {
+              x: ren.offset.x + x,
+              y: ren.offset.y + y,
+            }
+          }
+          MouseScrollDelta::PixelDelta(delta) => {
+            ren.offset = renderer::Offset {
+              x: ren.offset.x + delta.x as f32,
+              y: ren.offset.y + delta.y as f32,
+            }
+          }
+        }
+        ren.window.request_redraw();
       }
       _ => {}
     },

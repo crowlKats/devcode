@@ -1,8 +1,9 @@
 use futures::task::SpawnExt;
-use wgpu_glyph::{Region, Section, Text};
+use wgpu_glyph::{Section, Text};
 
 pub struct Renderer {
   pub window: winit::window::Window,
+  pub offset: Offset,
   surface: wgpu::Surface,
   size: winit::dpi::PhysicalSize<u32>,
   device: wgpu::Device,
@@ -13,6 +14,11 @@ pub struct Renderer {
   local_pool: futures::executor::LocalPool,
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   text: String,
+}
+
+pub struct Offset {
+  pub x: f32,
+  pub y: f32,
 }
 
 const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
@@ -63,6 +69,7 @@ impl Renderer {
 
     Ok(Self {
       window,
+      offset: Offset { x: 0f32, y: 0f32 },
       surface,
       size,
       device,
@@ -122,7 +129,7 @@ impl Renderer {
     }
 
     self.glyph_brush.queue(Section {
-      screen_position: (20.0, 10.0),
+      screen_position: (20.0, 10.0 + self.offset.y),
       text: vec![Text::new(&self.text)
         .with_color([0.9, 0.9, 0.9, 1.0])
         .with_scale(40.0)],
@@ -131,18 +138,13 @@ impl Renderer {
 
     self
       .glyph_brush
-      .draw_queued_with_transform_and_scissoring(
+      .draw_queued(
         &self.device,
         &mut self.staging_belt,
         &mut encoder,
         &frame.view,
-        wgpu_glyph::orthographic_projection(self.size.width, self.size.height),
-        Region {
-          x: 0,
-          y: 0,
-          width: self.size.width,
-          height: self.size.height,
-        },
+        self.size.width,
+        self.size.height,
       )
       .unwrap();
 

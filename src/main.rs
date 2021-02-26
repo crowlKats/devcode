@@ -48,8 +48,8 @@ fn main() -> Result<(), anyhow::Error> {
           }
           MouseScrollDelta::PixelDelta(delta) => {
             ren.offset = renderer::Offset {
-              x: ren.offset.x + delta.x as f32,
-              y: ren.offset.y + delta.y as f32,
+              x: (ren.offset.x + delta.x as f32).min(0f32),
+              y: (ren.offset.y + delta.y as f32).min(0f32),
             }
           }
         }
@@ -96,9 +96,7 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
       let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
       let path = std::path::Path::new("/usr/local/share/fonts");
       extend_fonts!(fonts, path);
-      let path = std::path::Path::new("~/.fonts");
-      extend_fonts!(fonts, path);
-      let expanded_path = shellexpand::tilde("~/Library/Fonts");
+      let expanded_path = shellexpand::tilde("~/.fonts");
       let expanded_path = expanded_path.to_string();
       let path = std::path::Path::new(&expanded_path);
       extend_fonts!(fonts, path);

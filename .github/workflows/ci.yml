@@ -58,17 +58,17 @@ jobs:
       if: matrix.kind == 'release'
       run: cargo build --release --locked --all-targets -vv
 
-    - name: Test debug
-      if: matrix.kind == 'debug'
-      run: cargo test --locked --all-targets
-
-    - name: Test release
-      if: matrix.kind == 'release'
-      run: cargo test --release --locked --all-targets
-
     - name: Upload Artifact
       if: matrix.kind == 'release'
       uses: actions/upload-artifact@v2
       with:
         name: devcode_${{ matrix.os }}
         path: target/release/devcode*
+
+    - name: Test debug
+      if: matrix.kind == 'debug'
+      run: cargo test --locked --all-targets -- --show-output
+
+    - name: Test release
+      if: matrix.kind == 'release'
+      run: cargo test --release --locked --all-targets

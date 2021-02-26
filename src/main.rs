@@ -5,6 +5,7 @@ mod renderer;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use wgpu_glyph::ab_glyph;
+use winit::event::WindowEvent;
 
 fn main() -> Result<(), anyhow::Error> {
   let args: Vec<String> = std::env::args().collect();
@@ -80,32 +81,20 @@ fn main() -> Result<(), anyhow::Error> {
   };
 
   let event_loop = winit::event_loop::EventLoop::new();
-  let mut ren = renderer::Renderer::new(&event_loop, font, text);
+  let mut ren = futures::executor::block_on(async {
+    renderer::Renderer::new(&event_loop, font, text).await
+  })?;
 
   ren.window.request_redraw();
 
   event_loop.run(move |event, _, control_flow| match event {
-    winit::event::Event::WindowEvent {
-      event: winit::event::WindowEvent::CloseRequested,
-      ..
-    } => *control_flow = winit::event_loop::ControlFlow::Exit,
-    winit::event::Event::WindowEvent {
-      event: winit::event::WindowEvent::Resized(size),
-      ..
-    } => {
-      ren.size = size;
-
-      ren.swap_chain = ren.device.create_swap_chain(
-        &ren.surface,
-        &wgpu::SwapChainDescriptor {
-          usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-          format: renderer::RENDER_FORMAT,
-          width: ren.size.width,
-          height: ren.size.height,
-          present_mode: wgpu::PresentMode::Mailbox,
-        },
-      );
-    }
+    winit::event::Event::WindowEvent { event, .. } => match event {
+      WindowEvent::Resized(size) => ren.resize(size),
+      WindowEvent::CloseRequested => {
+        *control_flow = winit::event_loop::ControlFlow::Exit
+      }
+      _ => {}
+    },
     winit::event::Event::RedrawRequested(_) => ren.redraw().unwrap(),
     _ => *control_flow = winit::event_loop::ControlFlow::Wait,
   });

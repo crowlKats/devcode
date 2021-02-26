@@ -48,8 +48,8 @@ fn main() -> Result<(), anyhow::Error> {
           }
           MouseScrollDelta::PixelDelta(delta) => {
             ren.offset = renderer::Offset {
-              x: ren.offset.x + delta.x as f32,
-              y: ren.offset.y + delta.y as f32,
+              x: (ren.offset.x + delta.x as f32).min(0f32),
+              y: (ren.offset.y + delta.y as f32).min(0f32),
             }
           }
         }

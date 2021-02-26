@@ -62,6 +62,15 @@ fn main() -> Result<(), anyhow::Error> {
   });
 }
 
+macro_rules! extend_fonts {
+  ($e: expr, $p: expr) => {
+    match std::fs::read_dir($p) {
+      Ok(fonts) => $e.extend(fonts),
+      Err(_) => {}
+    }
+  };
+}
+
 fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
   let fonts = {
     #[cfg(target_os = "macos")]
@@ -86,13 +95,13 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
       let path = std::path::Path::new("/usr/share/fonts");
       let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
       let path = std::path::Path::new("/usr/local/share/fonts");
-      fonts.extend(std::fs::read_dir(path)?);
+      extend_fonts!(fonts, path);
       let path = std::path::Path::new("~/.fonts");
-      fonts.extend(std::fs::read_dir(path)?);
+      extend_fonts!(fonts, path);
       let expanded_path = shellexpand::tilde("~/Library/Fonts");
       let expanded_path = expanded_path.to_string();
       let path = std::path::Path::new(&expanded_path);
-      fonts.extend(std::fs::read_dir(path)?);
+      extend_fonts!(fonts, path);
       fonts
     }
   };

@@ -87,9 +87,7 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
       let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
       let path = std::path::Path::new("/usr/local/share/fonts");
       fonts.extend(std::fs::read_dir(path)?);
-      let path = std::path::Path::new("~/.fonts");
-      fonts.extend(std::fs::read_dir(path)?);
-      let expanded_path = shellexpand::tilde("~/Library/Fonts");
+      let expanded_path = shellexpand::tilde("~/.fonts");
       let expanded_path = expanded_path.to_string();
       let path = std::path::Path::new(&expanded_path);
       fonts.extend(std::fs::read_dir(path)?);

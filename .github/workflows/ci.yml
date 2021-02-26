@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on:
   push:
@@ -27,18 +27,20 @@ jobs:
           - os: windows-2019
             kind: release
     steps:
-    - uses: actions/checkout@v2
+    - name: Clone repo
+      uses: actions/checkout@v2
+
     - name: Install rust
       uses: hecrj/setup-rust-action@v1
       with:
         rust-version: 1.50.0
-        
+
     - name: Install clippy and rustfmt
       if: matrix.kind == 'lint'
       run: |
         rustup component add clippy
         rustup component add rustfmt
-        
+
     - name: lint
       if: matrix.kind == 'lint'
       run: cargo clippy -- -D clippy::all
@@ -47,14 +49,10 @@ jobs:
       if: matrix.kind == 'lint'
       run: cargo fmt -- --check
 
-    - name: check fmt
-      if: matrix.kind == 'lint'
-      run: cargo fmt -- --check
-
     - name: Build debug
       if: matrix.kind == 'debug'
       run: cargo build --locked --all-targets
-        
+
     - name: Build release
       if: matrix.kind == 'release'
       run: cargo build --release --locked --all-targets -vv

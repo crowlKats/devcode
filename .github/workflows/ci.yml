@@ -78,7 +78,7 @@ jobs:
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'windows')
       run: |
         $client = new-object System.Net.WebClient
-        $client.DownloadFile(env:$MONTSERRAT_URL, "C:\Windows\Fonts\Montserrat-Regular.ttf")
+        $client.DownloadFile("$env:MONTSERRAT_URL", "C:\Windows\Fonts\Montserrat-Regular.ttf")
 
     - name: test debug
       if: matrix.kind == 'debug'

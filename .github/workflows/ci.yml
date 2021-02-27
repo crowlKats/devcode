@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  MONTSERRAT_URL: 'https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-Regular.ttf'
 
 jobs:
   build:
@@ -28,15 +29,15 @@ jobs:
             kind: release
 
     steps:
-    - name: Clone repo
+    - name: clone repo
       uses: actions/checkout@v2
 
-    - name: Install rust
+    - name: install rust
       uses: hecrj/setup-rust-action@v1
       with:
         rust-version: 1.50.0
 
-    - name: Install clippy and rustfmt
+    - name: install clippy and rustfmt
       if: matrix.kind == 'lint'
       run: |
         rustup component add clippy
@@ -50,25 +51,39 @@ jobs:
       if: matrix.kind == 'lint'
       run: cargo fmt -- --check
 
-    - name: Build debug
+    - name: build debug
       if: matrix.kind == 'debug'
       run: cargo build --locked --all-targets
 
-    - name: Build release
+    - name: build release
       if: matrix.kind == 'release'
       run: cargo build --release --locked --all-targets -vv
 
-    - name: Upload Artifact
+    - name: upload release artifact
       if: matrix.kind == 'release'
       uses: actions/upload-artifact@v2
       with:
         name: devcode_${{ matrix.os }}
         path: target/release/devcode*
 
-    - name: Test debug
+    - name: install Montserrat (Ubuntu)
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'ubuntu')
+      run: curl -o /usr/share/fonts/Montserrat-Regular.ttf $MONTSERRAT_URL
+
+    - name: install Montserrat (Mac)
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'macos')
+      run: curl -o /Library/Fonts/Montserrat-Regular.ttf $MONTSERRAT_URL
+
+    - name: install Montserrat (Windows)
+      if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'windows')
+      run: |
+        $client = new-object System.Net.WebClient
+        $client.DownloadFile("$env:MONTSERRAT_URL", "C:\Windows\Fonts\Montserrat-Regular.ttf")
+
+    - name: test debug
       if: matrix.kind == 'debug'
       run: cargo test --locked --all-targets -- --show-output
 
-    - name: Test release
+    - name: test release
       if: matrix.kind == 'release'
-      run: cargo test --release --locked --all-targets
+      run: cargo test --release --locked --all-targets -- --show-output

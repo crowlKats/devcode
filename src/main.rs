@@ -62,62 +62,67 @@ fn main() -> Result<(), anyhow::Error> {
   });
 }
 
-fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
-  let fonts = {
-    #[cfg(target_os = "macos")]
-    {
-      let path = std::path::Path::new("/Library/Fonts/");
-      let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
-      let path = std::path::Path::new("/System/Library/Fonts/");
-      fonts.extend(std::fs::read_dir(path)?);
-      let expanded_path = shellexpand::tilde("~/Library/Fonts");
-      let expanded_path = expanded_path.to_string();
-      let path = std::path::Path::new(&expanded_path);
-      fonts.extend(std::fs::read_dir(path)?);
-      fonts
-    }
-    #[cfg(target_os = "windows")]
-    {
-      let path = std::path::Path::new(r"C:\Windows\Fonts");
-      std::fs::read_dir(path)?.collect::<Vec<_>>()
-    }
-    #[cfg(target_os = "linux")]
-    {
-      let path = std::path::Path::new("/usr/share/fonts");
-      let mut fonts = std::fs::read_dir(path)?.collect::<Vec<_>>();
-      let path = std::path::Path::new("/usr/local/share/fonts");
-      fonts.extend(std::fs::read_dir(path)?);
-      let expanded_path = shellexpand::tilde("~/.fonts");
-      let expanded_path = expanded_path.to_string();
-      let path = std::path::Path::new(&expanded_path);
-      fonts.extend(std::fs::read_dir(path)?);
-      fonts
+macro_rules! extend_fonts {
+  ($e: expr, $p: expr) => {
+    match std::fs::read_dir($p) {
+      Ok(fonts) => $e.extend(fonts),
+      Err(_) => {}
     }
   };
-  Ok(
-    fonts
-      .iter()
-      .filter(|font| font.as_ref().unwrap().path().is_file())
-      .map(|font| {
-        let font_path = font.as_ref().unwrap().path();
-        (
-          font_path
-            .file_stem()
-            .unwrap()
-            .to_os_string()
-            .into_string()
-            .unwrap(),
-          font_path,
-        )
-      })
-      .collect(),
-  )
+}
+
+fn get_font_map() -> HashMap<String, PathBuf> {
+  let mut fonts = vec![];
+  #[cfg(target_os = "linux")]
+  {
+    let path = std::path::Path::new("/usr/share/fonts");
+    extend_fonts!(fonts, path);
+    let path = std::path::Path::new("/usr/local/share/fonts");
+    extend_fonts!(fonts, path);
+    let expanded_path = shellexpand::tilde("~/.fonts");
+    let expanded_path = expanded_path.to_string();
+    let path = std::path::Path::new(&expanded_path);
+    extend_fonts!(fonts, path);
+  }
+  #[cfg(target_os = "macos")]
+  {
+    let path = std::path::Path::new("/Library/Fonts");
+    extend_fonts!(fonts, path);
+    let path = std::path::Path::new("/System/Library/Fonts");
+    extend_fonts!(fonts, path);
+    let expanded_path = shellexpand::tilde("~/Library/Fonts");
+    let expanded_path = expanded_path.to_string();
+    let path = std::path::Path::new(&expanded_path);
+    extend_fonts!(fonts, path);
+  }
+  #[cfg(target_os = "windows")]
+  {
+    let path = std::path::Path::new(r"C:\Windows\Fonts");
+    extend_fonts!(fonts, path);
+  }
+
+  fonts
+    .iter()
+    .filter(|font| font.as_ref().unwrap().path().is_file())
+    .map(|font| {
+      let font_path = font.as_ref().unwrap().path();
+      (
+        font_path
+          .file_stem()
+          .unwrap()
+          .to_os_string()
+          .into_string()
+          .unwrap(),
+        font_path,
+      )
+    })
+    .collect()
 }
 
 fn get_font(
   name: Option<&String>,
 ) -> Result<wgpu_glyph::ab_glyph::FontArc, anyhow::Error> {
-  let fonts = get_font_map()?;
+  let fonts = get_font_map();
   let font = name
     .and_then(|font| fonts.get(font))
     .unwrap_or_else(|| fonts.values().next().unwrap());
@@ -132,17 +137,17 @@ mod tests {
 
   #[test]
   fn font_map_contains() {
-    let font_map = get_font_map().unwrap();
+    let font_map = get_font_map();
     println!("{:#?}", font_map);
-    assert!(font_map.contains_key(&String::from("Helvetica")))
+    assert!(font_map.contains_key(&String::from("Montserrat-Regular")));
   }
 
   #[test]
   fn get_specific_font() {
-    assert!(get_font(Some(&String::from("Helvetica"))).is_ok())
+    assert!(get_font(Some(&String::from("Montserrat-Regular"))).is_ok());
   }
   #[test]
   fn get_first_font() {
-    assert!(get_font(None).is_ok())
+    assert!(get_font(None).is_ok());
   }
 }

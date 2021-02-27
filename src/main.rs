@@ -71,7 +71,7 @@ macro_rules! extend_fonts {
   };
 }
 
-fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
+fn get_font_map() -> HashMap<String, PathBuf> {
   let mut fonts = vec![];
   #[cfg(target_os = "macos")]
   {
@@ -83,7 +83,6 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
     let expanded_path = expanded_path.to_string();
     let path = std::path::Path::new(&expanded_path);
     extend_fonts!(fonts, path);
-    fonts
   }
   #[cfg(target_os = "windows")]
   {
@@ -100,33 +99,30 @@ fn get_font_map() -> Result<HashMap<String, PathBuf>, anyhow::Error> {
     let expanded_path = expanded_path.to_string();
     let path = std::path::Path::new(&expanded_path);
     extend_fonts!(fonts, path);
-    fonts
   }
 
-  Ok(
-    fonts
-      .iter()
-      .filter(|font| font.as_ref().unwrap().path().is_file())
-      .map(|font| {
-        let font_path = font.as_ref().unwrap().path();
-        (
-          font_path
-            .file_stem()
-            .unwrap()
-            .to_os_string()
-            .into_string()
-            .unwrap(),
-          font_path,
-        )
-      })
-      .collect(),
-  )
+  fonts
+    .iter()
+    .filter(|font| font.as_ref().unwrap().path().is_file())
+    .map(|font| {
+      let font_path = font.as_ref().unwrap().path();
+      (
+        font_path
+          .file_stem()
+          .unwrap()
+          .to_os_string()
+          .into_string()
+          .unwrap(),
+        font_path,
+      )
+    })
+    .collect()
 }
 
 fn get_font(
   name: Option<&String>,
 ) -> Result<wgpu_glyph::ab_glyph::FontArc, anyhow::Error> {
-  let fonts = get_font_map()?;
+  let fonts = get_font_map();
   let font = name
     .and_then(|font| fonts.get(font))
     .unwrap_or_else(|| fonts.values().next().unwrap());
@@ -141,7 +137,7 @@ mod tests {
 
   #[test]
   fn font_map_contains() {
-    let font_map = get_font_map().unwrap();
+    let font_map = get_font_map();
     println!("{:#?}", font_map);
     assert!(font_map.contains_key(&String::from("Montserrat-Regular")))
   }

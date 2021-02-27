@@ -1,9 +1,10 @@
+mod code_view;
+
 use futures::task::SpawnExt;
-use wgpu_glyph::{Section, Text};
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 pub struct Renderer {
   pub window: winit::window::Window,
-  offset: winit::dpi::PhysicalPosition<f64>,
   surface: wgpu::Surface,
   size: winit::dpi::PhysicalSize<u32>,
   device: wgpu::Device,
@@ -13,12 +14,10 @@ pub struct Renderer {
   local_spawner: futures::executor::LocalSpawner,
   local_pool: futures::executor::LocalPool,
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
-  text: String,
-  font_height: f32,
+  code_view: code_view::CodeView,
 }
 
 const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
-const TOP_PADDING: f32 = 10.0;
 
 impl Renderer {
   pub async fn new(
@@ -66,7 +65,6 @@ impl Renderer {
 
     Ok(Self {
       window,
-      offset: winit::dpi::PhysicalPosition { x: 0f64, y: 0f64 },
       surface,
       size,
       device,
@@ -76,12 +74,11 @@ impl Renderer {
       local_spawner,
       local_pool,
       glyph_brush,
-      text,
-      font_height: 40.0,
+      code_view: code_view::CodeView::new(text),
     })
   }
 
-  pub fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+  pub fn resize(&mut self, size: PhysicalSize<u32>) {
     self.size = size;
 
     self.swap_chain = self.device.create_swap_chain(
@@ -96,13 +93,8 @@ impl Renderer {
     );
   }
 
-  pub fn scroll(&mut self, offset: winit::dpi::PhysicalPosition<f64>) {
-    let line_count = self.text.lines().count();
-
-    self.offset.x = (self.offset.x + offset.x).min(0f64);
-    self.offset.y = (self.offset.y + offset.y).min(0f64).max(
-      -(((line_count as f32 - 3.0) * self.font_height) + TOP_PADDING) as f64,
-    );
+  pub fn scroll(&mut self, offset: PhysicalPosition<f64>) {
+    self.code_view.scroll(offset);
   }
 
   pub fn redraw(&mut self) -> Result<(), anyhow::Error> {
@@ -117,7 +109,7 @@ impl Renderer {
 
     {
       let _ = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("Render pass"),
+        label: None,
         color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
           attachment: &frame.view,
           resolve_target: None,
@@ -135,13 +127,7 @@ impl Renderer {
       });
     }
 
-    self.glyph_brush.queue(Section {
-      screen_position: (20.0, TOP_PADDING + self.offset.y as f32),
-      text: vec![Text::new(&self.text)
-        .with_color([0.9, 0.9, 0.9, 1.0])
-        .with_scale(self.font_height)],
-      ..Section::default()
-    });
+    self.code_view.redraw(&mut self.glyph_brush);
 
     self
       .glyph_brush
@@ -162,4 +148,10 @@ impl Renderer {
 
     Ok(())
   }
+}
+
+trait RenderElement {
+  fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>);
+  fn scroll(&mut self, offset: winit::dpi::PhysicalPosition<f64>);
+  fn redraw(&mut self, glyph_brush: &mut wgpu_glyph::GlyphBrush<()>);
 }

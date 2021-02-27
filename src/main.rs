@@ -41,16 +41,13 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::MouseWheel { delta, .. } => {
         match delta {
           MouseScrollDelta::LineDelta(x, y) => {
-            ren.offset = renderer::Offset {
-              x: ren.offset.x + x,
-              y: ren.offset.y + y,
-            }
+            ren.scroll(winit::dpi::PhysicalPosition {
+              x: x as f64,
+              y: y as f64,
+            });
           }
           MouseScrollDelta::PixelDelta(delta) => {
-            ren.offset = renderer::Offset {
-              x: (ren.offset.x + delta.x as f32).min(0f32),
-              y: (ren.offset.y + delta.y as f32).min(0f32),
-            }
+            ren.scroll(delta);
           }
         }
         ren.window.request_redraw();

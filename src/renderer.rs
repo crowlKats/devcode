@@ -3,7 +3,7 @@ use wgpu_glyph::{Section, Text};
 
 pub struct Renderer {
   pub window: winit::window::Window,
-  pub offset: Offset,
+  offset: winit::dpi::PhysicalPosition<f64>,
   surface: wgpu::Surface,
   size: winit::dpi::PhysicalSize<u32>,
   device: wgpu::Device,
@@ -14,14 +14,11 @@ pub struct Renderer {
   local_pool: futures::executor::LocalPool,
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   text: String,
-}
-
-pub struct Offset {
-  pub x: f32,
-  pub y: f32,
+  font_height: f32,
 }
 
 const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
+const TOP_PADDING: f32 = 10.0;
 
 impl Renderer {
   pub async fn new(
@@ -69,7 +66,7 @@ impl Renderer {
 
     Ok(Self {
       window,
-      offset: Offset { x: 0f32, y: 0f32 },
+      offset: winit::dpi::PhysicalPosition { x: 0f64, y: 0f64 },
       surface,
       size,
       device,
@@ -80,6 +77,7 @@ impl Renderer {
       local_pool,
       glyph_brush,
       text,
+      font_height: 40.0,
     })
   }
 
@@ -95,6 +93,15 @@ impl Renderer {
         height: self.size.height,
         present_mode: wgpu::PresentMode::Mailbox,
       },
+    );
+  }
+
+  pub fn scroll(&mut self, offset: winit::dpi::PhysicalPosition<f64>) {
+    let line_count = self.text.lines().count();
+
+    self.offset.x = (self.offset.x + offset.x).min(0f64);
+    self.offset.y = (self.offset.y + offset.y).min(0f64).max(
+      -(((line_count as f32 - 3.0) * self.font_height) + TOP_PADDING) as f64,
     );
   }
 
@@ -129,10 +136,10 @@ impl Renderer {
     }
 
     self.glyph_brush.queue(Section {
-      screen_position: (20.0, 10.0 + self.offset.y),
+      screen_position: (20.0, TOP_PADDING + self.offset.y as f32),
       text: vec![Text::new(&self.text)
         .with_color([0.9, 0.9, 0.9, 1.0])
-        .with_scale(40.0)],
+        .with_scale(self.font_height)],
       ..Section::default()
     });
 

@@ -122,10 +122,11 @@ fn get_font(
   let fonts = get_font_map();
   let font = name
     .and_then(|font| fonts.get(font))
-    .unwrap_or_else(|| fonts.values().next().unwrap());
-  let font_data = std::fs::read(font)?;
+    .map(std::fs::read)
+    .transpose()?
+    .unwrap_or_else(|| include_bytes!("./JetBrainsMono-Regular.ttf").to_vec());
 
-  Ok(wgpu_glyph::ab_glyph::FontArc::try_from_vec(font_data)?)
+  Ok(wgpu_glyph::ab_glyph::FontArc::try_from_vec(font)?)
 }
 
 #[cfg(test)]
@@ -134,9 +135,7 @@ mod tests {
 
   #[test]
   fn font_map_contains() {
-    let font_map = get_font_map();
-    println!("{:#?}", font_map);
-    assert!(font_map.contains_key(&String::from("Montserrat-Regular")));
+    assert!(get_font_map().contains_key(&String::from("Montserrat-Regular")));
   }
 
   #[test]
@@ -144,7 +143,7 @@ mod tests {
     assert!(get_font(Some(&String::from("Montserrat-Regular"))).is_ok());
   }
   #[test]
-  fn get_first_font() {
+  fn get_default_font() {
     assert!(get_font(None).is_ok());
   }
 }

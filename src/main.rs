@@ -73,6 +73,17 @@ macro_rules! extend_fonts {
 
 fn get_font_map() -> HashMap<String, PathBuf> {
   let mut fonts = vec![];
+  #[cfg(target_os = "linux")]
+  {
+    let path = std::path::Path::new("/usr/share/fonts");
+    extend_fonts!(fonts, path);
+    let path = std::path::Path::new("/usr/local/share/fonts");
+    extend_fonts!(fonts, path);
+    let expanded_path = shellexpand::tilde("~/.fonts");
+    let expanded_path = expanded_path.to_string();
+    let path = std::path::Path::new(&expanded_path);
+    extend_fonts!(fonts, path);
+  }
   #[cfg(target_os = "macos")]
   {
     let path = std::path::Path::new("/Library/Fonts");
@@ -87,17 +98,6 @@ fn get_font_map() -> HashMap<String, PathBuf> {
   #[cfg(target_os = "windows")]
   {
     let path = std::path::Path::new(r"C:\Windows\Fonts");
-    extend_fonts!(fonts, path);
-  }
-  #[cfg(target_os = "linux")]
-  {
-    let path = std::path::Path::new("/usr/share/fonts");
-    extend_fonts!(fonts, path);
-    let path = std::path::Path::new("/usr/local/share/fonts");
-    extend_fonts!(fonts, path);
-    let expanded_path = shellexpand::tilde("~/.fonts");
-    let expanded_path = expanded_path.to_string();
-    let path = std::path::Path::new(&expanded_path);
     extend_fonts!(fonts, path);
   }
 
@@ -139,15 +139,15 @@ mod tests {
   fn font_map_contains() {
     let font_map = get_font_map();
     println!("{:#?}", font_map);
-    assert!(font_map.contains_key(&String::from("Montserrat-Regular")))
+    assert!(font_map.contains_key(&String::from("Montserrat-Regular")));
   }
 
   #[test]
   fn get_specific_font() {
-    assert!(get_font(Some(&String::from("Montserrat-Regular"))).is_ok())
+    assert!(get_font(Some(&String::from("Montserrat-Regular"))).is_ok());
   }
   #[test]
   fn get_first_font() {
-    assert!(get_font(None).is_ok())
+    assert!(get_font(None).is_ok());
   }
 }

@@ -72,7 +72,7 @@ jobs:
 
     - name: install Montserrat (Mac)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'macos')
-      run: curl -o ~/Library/Fonts/Montserrat-Regular.ttf $MONTSERRAT_URL
+      run: curl -o /Library/Fonts/Montserrat-Regular.ttf $MONTSERRAT_URL
 
     - name: install Montserrat (Windows)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'windows')

@@ -64,7 +64,9 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: devcode_${{ matrix.os }}
-        path: target/release/devcode*
+        path: |
+          target/release/devcode
+          target/release/devcode.exe
 
     - name: install Montserrat (Ubuntu)
       if: (matrix.kind == 'debug' || matrix.kind == 'release') && startsWith(matrix.os, 'ubuntu')

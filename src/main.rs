@@ -15,7 +15,8 @@ fn main() -> Result<(), anyhow::Error> {
   let filepath = std::path::PathBuf::from(file);
   if !filepath.exists() {
     anyhow::bail!("path doesn't exist");
-  } else if !filepath.is_file() {
+  }
+  if !filepath.is_file() {
     anyhow::bail!("path isn't a file");
   }
   let text = std::fs::read_to_string(filepath)?;

@@ -1,7 +1,10 @@
 mod code_view;
 
 use futures::task::SpawnExt;
+use wgpu_glyph::ab_glyph::Font;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
 pub struct Renderer {
   pub window: winit::window::Window,
@@ -16,8 +19,6 @@ pub struct Renderer {
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   code_view: code_view::CodeView,
 }
-
-const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
 impl Renderer {
   pub async fn new(
@@ -60,6 +61,10 @@ impl Renderer {
       },
     );
 
+    let font_height = 40.0;
+    let font_size =
+      font.glyph_bounds(&font.glyph_id('0').with_scale(font_height));
+
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font)
       .build(&device, RENDER_FORMAT);
 
@@ -74,7 +79,7 @@ impl Renderer {
       local_spawner,
       local_pool,
       glyph_brush,
-      code_view: code_view::CodeView::new(text),
+      code_view: code_view::CodeView::new(text, font_size),
     })
   }
 
@@ -91,10 +96,12 @@ impl Renderer {
         present_mode: wgpu::PresentMode::Mailbox,
       },
     );
+
+    self.scroll(PhysicalPosition { x: 0.0, y: 0.0 });
   }
 
   pub fn scroll(&mut self, offset: PhysicalPosition<f64>) {
-    self.code_view.scroll(offset);
+    self.code_view.scroll(offset, self.size);
   }
 
   pub fn redraw(&mut self) -> Result<(), anyhow::Error> {
@@ -152,6 +159,10 @@ impl Renderer {
 
 trait RenderElement {
   fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>);
-  fn scroll(&mut self, offset: winit::dpi::PhysicalPosition<f64>);
+  fn scroll(
+    &mut self,
+    offset: winit::dpi::PhysicalPosition<f64>,
+    size: winit::dpi::PhysicalSize<u32>,
+  );
   fn redraw(&mut self, glyph_brush: &mut wgpu_glyph::GlyphBrush<()>);
 }

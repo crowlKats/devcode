@@ -61,9 +61,15 @@ impl Renderer {
       },
     );
 
-    let font_height = 40.0;
-    let font_size =
-      font.glyph_bounds(&font.glyph_id('0').with_scale(font_height));
+    let px_per_em = (13.0 / 72.0) * (96.0 * window.scale_factor() as f32);
+    let units_per_em = font.units_per_em().unwrap();
+    let height = font.height_unscaled();
+
+    let font_size = font.glyph_bounds(
+      &font
+        .glyph_id('0')
+        .with_scale((px_per_em / units_per_em) * height),
+    );
 
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font)
       .build(&device, RENDER_FORMAT);

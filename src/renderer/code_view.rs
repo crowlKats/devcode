@@ -9,11 +9,11 @@ pub struct CodeView {
 }
 
 impl CodeView {
-  pub fn new(text: String, size: Rect) -> Self {
+  pub fn new(text: String, font_size: Rect) -> Self {
     CodeView {
       text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0f64, y: 0f64 },
-      font_size: size,
+      font_size,
     }
   }
 }
@@ -36,11 +36,11 @@ impl super::RenderElement for CodeView {
       line_count += 1;
     }
 
+    let max_width = max_line_length as f64 * self.font_size.width() as f64;
     let line_count_digits_len = (line_count as f32).log10().floor() + 1.0;
     let line_numbers_width = line_count_digits_len * self.font_size.width();
-    let max_width = max_line_length as f64 * self.font_size.width() as f64;
     self.scroll_offset.x = (self.scroll_offset.x - offset.x)
-      .max((size.width as f64 - max_width) + (line_numbers_width as f64 + 20.0))
+      .max((line_numbers_width as f64 + 20.0) + (size.width as f64 - max_width))
       .min(0.0);
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)

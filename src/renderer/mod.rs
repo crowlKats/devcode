@@ -1,6 +1,9 @@
 mod code_view;
 
+use bytemuck::{Pod, Zeroable};
 use futures::task::SpawnExt;
+use std::borrow::Cow;
+use wgpu::util::DeviceExt;
 use wgpu_glyph::ab_glyph::Font;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
@@ -9,7 +12,7 @@ const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 pub struct Renderer {
   pub window: winit::window::Window,
   surface: wgpu::Surface,
-  size: winit::dpi::PhysicalSize<u32>,
+  size: PhysicalSize<u32>,
   device: wgpu::Device,
   queue: wgpu::Queue,
   swap_chain: wgpu::SwapChain,
@@ -74,6 +77,7 @@ impl Renderer {
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font)
       .build(&device, RENDER_FORMAT);
 
+    let code_view = code_view::CodeView::new(text, font_size, &device, size);
     Ok(Self {
       window,
       surface,
@@ -85,7 +89,7 @@ impl Renderer {
       local_spawner,
       local_pool,
       glyph_brush,
-      code_view: code_view::CodeView::new(text, font_size),
+      code_view,
     })
   }
 
@@ -121,7 +125,7 @@ impl Renderer {
     let frame = self.swap_chain.get_current_frame()?.output;
 
     {
-      let _ = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+      let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: None,
         color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
           attachment: &frame.view,
@@ -138,6 +142,7 @@ impl Renderer {
         }],
         depth_stencil_attachment: None,
       });
+      self.code_view.rpass(&mut rpass);
     }
 
     self.code_view.redraw(&mut self.glyph_brush);
@@ -171,4 +176,121 @@ trait RenderElement {
     size: winit::dpi::PhysicalSize<u32>,
   );
   fn redraw(&mut self, glyph_brush: &mut wgpu_glyph::GlyphBrush<()>);
+  //fn get_rects(&self) -> &[&Rectangle];
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+struct Vertex {
+  position: [f32; 2],
+  color: [f32; 3],
+}
+
+pub struct Rectangle {
+  render_pipeline: wgpu::RenderPipeline,
+  vertex_buffer: wgpu::Buffer,
+}
+
+impl Rectangle {
+  pub fn new(
+    device: &wgpu::Device,
+    position: PhysicalPosition<f32>,
+    end_position: PhysicalPosition<f32>,
+    color: [f32; 3],
+  ) -> Self {
+    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+      label: None,
+      source: wgpu::ShaderSource::Wgsl(Cow::from(include_str!(
+        "./rectangle_shader.wgsl"
+      ))),
+      flags: wgpu::ShaderFlags::VALIDATION,
+    });
+
+    let render_pipeline_layout =
+      device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Render Pipeline Layout"),
+        bind_group_layouts: &[],
+        push_constant_ranges: &[],
+      });
+
+    let render_pipeline =
+      device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex: wgpu::VertexState {
+          module: &shader,
+          entry_point: "vs_main",
+          buffers: &[wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &wgpu::vertex_attr_array![0 => Float2, 1 => Float3],
+          }],
+        },
+        fragment: Some(wgpu::FragmentState {
+          module: &shader,
+          entry_point: "fs_main",
+          targets: &[RENDER_FORMAT.into()],
+        }),
+        primitive: wgpu::PrimitiveState {
+          topology: wgpu::PrimitiveTopology::TriangleStrip,
+          ..Default::default()
+        },
+        depth_stencil: None,
+        multisample: Default::default(),
+      });
+
+    let vertices = &[
+      Vertex {
+        position: [position.x, position.y],
+        color,
+      }, // top left
+      Vertex {
+        position: [position.x + end_position.x, position.y],
+        color,
+      }, // top right
+      Vertex {
+        position: [position.x, position.y + end_position.y],
+        color,
+      }, // bottom left
+      Vertex {
+        position: [position.x + end_position.x, position.y + end_position.y],
+        color,
+      }, // bottom right
+    ];
+
+    let vertex_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(vertices),
+        usage: wgpu::BufferUsage::VERTEX,
+      });
+
+    Self {
+      render_pipeline,
+      vertex_buffer,
+    }
+  }
+
+  pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+    render_pass.set_pipeline(&self.render_pipeline);
+    render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+    render_pass.draw(0..4, 0..1);
+  }
+}
+
+fn calc_size(
+  screen_size: PhysicalSize<u32>,
+  position: PhysicalPosition<u32>,
+  size: PhysicalSize<u32>,
+) -> (PhysicalPosition<f32>, PhysicalPosition<f32>) {
+  (
+    PhysicalPosition {
+      x: (((position.x as f32) / (screen_size.width as f32)) * 2.0) - 1.0,
+      y: (((position.y as f32) / (screen_size.height as f32)) * 2.0) - 1.0,
+    },
+    PhysicalPosition {
+      x: ((size.width as f32) / (screen_size.width as f32)) * 2.0,
+      y: ((size.height as f32) / (screen_size.height as f32)) * 2.0,
+    },
+  )
 }

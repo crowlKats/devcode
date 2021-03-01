@@ -6,15 +6,43 @@ pub struct CodeView {
   text: String,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_size: Rect,
+  rect: super::Rectangle,
 }
 
 impl CodeView {
-  pub fn new(text: String, font_size: Rect) -> Self {
-    CodeView {
+  fn get_line_number_width(count: usize, font_width: f32) -> f32 {
+    let line_count_digits_len = (count as f32).log10().floor() + 1.0;
+    line_count_digits_len * font_width
+  }
+
+  pub fn new(
+    text: String,
+    font_size: Rect,
+    device: &wgpu::Device,
+    screen_size: PhysicalSize<u32>,
+  ) -> Self {
+    let line_numbers_width =
+      CodeView::get_line_number_width(text.lines().count(), font_size.width());
+    let (pos, end_pos) = super::calc_size(
+      screen_size,
+      PhysicalPosition { x: 0, y: 0 },
+      PhysicalSize {
+        width: line_numbers_width as u32 + 10,
+        height: screen_size.height,
+      },
+    );
+    let rect = super::Rectangle::new(device, pos, end_pos, [0.05, 0.05, 0.05]);
+
+    Self {
       text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0f64, y: 0f64 },
       font_size,
+      rect,
     }
+  }
+
+  pub fn rpass<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+    self.rect.render(render_pass);
   }
 }
 
@@ -37,8 +65,8 @@ impl super::RenderElement for CodeView {
     }
 
     let max_width = max_line_length as f64 * self.font_size.width() as f64;
-    let line_count_digits_len = (line_count as f32).log10().floor() + 1.0;
-    let line_numbers_width = line_count_digits_len * self.font_size.width();
+    let line_numbers_width =
+      CodeView::get_line_number_width(line_count, self.font_size.width());
     self.scroll_offset.x = (self.scroll_offset.x - offset.x)
       .max((line_numbers_width as f64 + 20.0) + (size.width as f64 - max_width))
       .min(0.0);
@@ -59,8 +87,8 @@ impl super::RenderElement for CodeView {
       line_numbers += &format!("{}\n", line_count);
     }
 
-    let line_count_digits_len = (line_count as f32).log10().floor() + 1.0;
-    let line_numbers_width = line_count_digits_len * self.font_size.width();
+    let line_numbers_width =
+      CodeView::get_line_number_width(line_count, self.font_size.width());
     glyph_brush.queue(Section {
       screen_position: (line_numbers_width, self.scroll_offset.y as f32),
       text: vec![Text::new(&line_numbers)

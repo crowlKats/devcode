@@ -1,18 +1,26 @@
+use crate::renderer::rectangle::Rectangle;
 use wgpu_glyph::ab_glyph::Rect;
-use wgpu_glyph::{HorizontalAlign, Layout, Section, Text};
+use wgpu_glyph::{HorizontalAlign, Layout, Region, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 pub struct CodeView {
   text: String,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_size: Rect,
-  rect: super::Rectangle,
+  pub rect: Rectangle,
+  pub cursor: Rectangle,
+  pub cursor_line: u32,
+  pub cursor_column: u32,
 }
 
 impl CodeView {
   fn get_line_number_width(count: usize, font_width: f32) -> f32 {
     let line_count_digits_len = (count as f32).log10().floor() + 1.0;
     line_count_digits_len * font_width
+  }
+
+  pub fn get_rects(&self) -> Vec<&Rectangle> {
+    vec![&self.cursor, &self.rect]
   }
 
   pub fn new(
@@ -23,32 +31,96 @@ impl CodeView {
   ) -> Self {
     let line_numbers_width =
       CodeView::get_line_number_width(text.lines().count(), font_size.width());
-    let (pos, end_pos) = super::calc_size(
+    let rect = Rectangle::new(
+      device,
       screen_size,
-      PhysicalPosition { x: 0, y: 0 },
+      PhysicalPosition { x: 0.0, y: 0.0 },
       PhysicalSize {
         width: line_numbers_width as u32 + 10,
         height: screen_size.height,
       },
+      [0.05, 0.05, 0.05],
     );
-    let rect = super::Rectangle::new(device, pos, end_pos, [0.05, 0.05, 0.05]);
+    let mut cursor = Rectangle::new(
+      device,
+      screen_size,
+      PhysicalPosition {
+        x: line_numbers_width + 20.0,
+        y: screen_size.height as f32 - font_size.height(),
+      },
+      PhysicalSize {
+        width: 6,
+        height: font_size.height() as u32,
+      },
+      [0.7, 0.0, 0.0],
+    );
+    cursor.region = Region {
+      x: line_numbers_width as u32 + 20,
+      y: 0,
+      width: screen_size.width - (line_numbers_width as u32 + 20),
+      height: screen_size.height,
+    };
 
     Self {
       text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0f64, y: 0f64 },
       font_size,
       rect,
+      cursor,
+      cursor_line: 0,
+      cursor_column: 0,
     }
   }
 
-  pub fn rpass<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-    self.rect.render(render_pass);
+  pub fn input(&mut self, size: PhysicalSize<u32>) {
+    let line_numbers_width = CodeView::get_line_number_width(
+      self.text.lines().count(),
+      self.font_size.width(),
+    );
+
+    self.cursor.resize(
+      size,
+      PhysicalPosition {
+        x: line_numbers_width
+          + 20.0
+          + (self.cursor_column as f32 * self.font_size.width()),
+        y: size.height as f32
+          - self.font_size.height()
+          - (self.cursor_line as f32 * self.font_size.height()),
+      },
+      self.cursor.size,
+    );
   }
 }
 
 impl super::RenderElement for CodeView {
-  fn resize(&mut self, _size: PhysicalSize<u32>) {
-    unimplemented!()
+  fn resize(&mut self, screen_size: PhysicalSize<u32>) {
+    let line_numbers_width = CodeView::get_line_number_width(
+      self.text.lines().count(),
+      self.font_size.width(),
+    );
+
+    self.rect.resize(
+      screen_size,
+      PhysicalPosition { x: 0.0, y: 0.0 },
+      PhysicalSize {
+        width: line_numbers_width as u32 + 10,
+        height: screen_size.height,
+      },
+    );
+
+    self.cursor.resize(
+      screen_size,
+      PhysicalPosition {
+        x: line_numbers_width
+          + 20.0
+          + (self.cursor_column as f32 * self.font_size.width()),
+        y: screen_size.height as f32
+          - self.font_size.height()
+          - (self.cursor_line as f32 * self.font_size.height()),
+      },
+      self.cursor.size,
+    );
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
@@ -73,9 +145,31 @@ impl super::RenderElement for CodeView {
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
       .max(-((line_count - 3) as f32 * self.font_size.height()) as f64);
+
+    self.cursor.resize(
+      size,
+      PhysicalPosition {
+        x: (line_numbers_width + 20.0)
+          + self.scroll_offset.x as f32
+          + (self.cursor_column as f32 * self.font_size.width()),
+        y: size.height as f32
+          - self.font_size.height()
+          - self.scroll_offset.y as f32
+          - (self.cursor_line as f32 * self.font_size.height()),
+      },
+      self.cursor.size,
+    );
   }
 
-  fn redraw(&mut self, glyph_brush: &mut wgpu_glyph::GlyphBrush<()>) {
+  fn redraw(
+    &mut self,
+    glyph_brush: &mut wgpu_glyph::GlyphBrush<()>,
+    device: &wgpu::Device,
+    staging_belt: &mut wgpu::util::StagingBelt,
+    encoder: &mut wgpu::CommandEncoder,
+    target: &wgpu::TextureView,
+    size: PhysicalSize<u32>,
+  ) {
     let mut line_count = 0;
     let mut line_numbers = String::new();
     for _ in self.text.lines() {
@@ -98,9 +192,21 @@ impl super::RenderElement for CodeView {
       ..Section::default()
     });
 
+    glyph_brush
+      .draw_queued(
+        device,
+        staging_belt,
+        encoder,
+        target,
+        size.width,
+        size.height,
+      )
+      .unwrap();
+
+    let codeview_offset = line_numbers_width + 20.0;
     glyph_brush.queue(Section {
       screen_position: (
-        line_numbers_width + 20.0 + self.scroll_offset.x as f32,
+        codeview_offset + self.scroll_offset.x as f32,
         self.scroll_offset.y as f32,
       ),
       text: vec![Text::new(&self.text)
@@ -108,5 +214,21 @@ impl super::RenderElement for CodeView {
         .with_scale(self.font_size.height())],
       ..Section::default()
     });
+
+    glyph_brush
+      .draw_queued_with_transform_and_scissoring(
+        device,
+        staging_belt,
+        encoder,
+        target,
+        wgpu_glyph::orthographic_projection(size.width, size.height),
+        wgpu_glyph::Region {
+          x: codeview_offset as u32,
+          y: 0,
+          width: size.width - codeview_offset as u32,
+          height: size.height,
+        },
+      )
+      .unwrap();
   }
 }

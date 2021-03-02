@@ -7,7 +7,7 @@ pub struct Rectangle {
   pub vertex_buffer: wgpu::Buffer,
   vertices: [super::Vertex; 4],
   color: [f32; 3],
-  pub region: Region,
+  pub region: Option<Region>,
   pub size: PhysicalSize<u32>,
 }
 
@@ -118,12 +118,7 @@ impl Rectangle {
       vertex_buffer,
       vertices,
       color,
-      region: Region {
-        x: 0,
-        y: 0,
-        width: screen_size.width,
-        height: screen_size.height,
-      },
+      region: None,
       size,
     }
   }

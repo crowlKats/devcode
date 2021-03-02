@@ -152,12 +152,16 @@ impl Renderer {
       rpass.set_pipeline(&self.rectangle_render_pipeline);
       for rect in self.code_view.get_rects() {
         rpass.set_vertex_buffer(0, rect.vertex_buffer.slice(..));
-        rpass.set_scissor_rect(
-          rect.region.x,
-          rect.region.y,
-          rect.region.width,
-          rect.region.height,
-        );
+        if let Some(ref region) = rect.region {
+          rpass.set_scissor_rect(
+            region.x,
+            region.y,
+            region.width,
+            region.height,
+          );
+        } else {
+          rpass.set_scissor_rect(0, 0, self.size.width, self.size.height);
+        }
         rpass.draw(0..4, 0..1);
       }
     }

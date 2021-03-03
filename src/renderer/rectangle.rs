@@ -105,7 +105,7 @@ impl Rectangle {
     color: [f32; 3],
   ) -> Self {
     let (pos, end_pos) = Self::calc_size(screen_size, position, size);
-    let vertices = Self::create_vertices(pos, end_pos, color.clone());
+    let vertices = Self::create_vertices(pos, end_pos, color);
 
     let vertex_buffer =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

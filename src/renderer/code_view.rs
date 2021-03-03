@@ -25,7 +25,8 @@ impl CodeView {
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
   ) -> Self {
-    let mut split_text = text.lines().collect::<Vec<String>>();
+    let mut split_text =
+      text.lines().map(|s| s.to_string()).collect::<Vec<String>>();
     if text.ends_with('\n') {
       split_text.push(String::from(""));
     }

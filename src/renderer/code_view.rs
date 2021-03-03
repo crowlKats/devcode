@@ -4,7 +4,7 @@ use wgpu_glyph::{HorizontalAlign, Layout, Region, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 pub struct CodeView {
-  text: String,
+  text: Vec<String>, // TODO: store as Vec<&str>
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_size: Rect,
   pub rect: Rectangle,
@@ -25,8 +25,11 @@ impl CodeView {
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
   ) -> Self {
-    let line_count_digits_len =
-      (text.lines().count() as f32).log10().floor() + 1.0;
+    let mut split_text = text.lines().collect::<Vec<String>>();
+    if text.ends_with('\n') {
+      split_text.push(String::from(""));
+    }
+    let line_count_digits_len = (split_text.len() as f32).log10().floor() + 1.0;
     let line_numbers_width = line_count_digits_len * font_size.width();
 
     let rect = Rectangle::new(
@@ -61,7 +64,7 @@ impl CodeView {
     });
 
     Self {
-      text,
+      text: split_text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0.0, y: 0.0 },
       font_size,
       rect,
@@ -123,14 +126,11 @@ impl super::RenderElement for CodeView {
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
     let mut line_count = 0;
     let mut max_line_length = 0;
-    for line in self.text.lines() {
+    for line in &self.text {
       line_count += 1;
       if line.len() > max_line_length {
         max_line_length = line.len();
       }
-    }
-    if self.text.ends_with('\n') {
-      line_count += 1;
     }
 
     let max_width = max_line_length as f64 * self.font_size.width() as f64;
@@ -171,11 +171,7 @@ impl super::RenderElement for CodeView {
   ) {
     let mut line_count = 0;
     let mut line_numbers = String::new();
-    for _ in self.text.lines() {
-      line_count += 1;
-      line_numbers += &format!("{}\n", line_count);
-    }
-    if self.text.ends_with('\n') {
+    for _ in &self.text {
       line_count += 1;
       line_numbers += &format!("{}\n", line_count);
     }
@@ -206,7 +202,7 @@ impl super::RenderElement for CodeView {
         codeview_offset + self.scroll_offset.x as f32,
         self.scroll_offset.y as f32,
       ),
-      text: vec![Text::new(&self.text)
+      text: vec![Text::new(&self.text.join("\n"))
         .with_color([0.9, 0.9, 0.9, 1.0])
         .with_scale(self.font_size.height())],
       ..Section::default()

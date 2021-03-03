@@ -9,6 +9,7 @@ pub struct Rectangle {
   color: [f32; 3],
   pub region: Option<Region>,
   pub size: PhysicalSize<u32>,
+  pub position: PhysicalPosition<f32>,
 }
 
 impl Rectangle {
@@ -120,6 +121,7 @@ impl Rectangle {
       color,
       region: None,
       size,
+      position,
     }
   }
 
@@ -129,6 +131,8 @@ impl Rectangle {
     position: PhysicalPosition<f32>,
     size: PhysicalSize<u32>,
   ) {
+    self.position = position;
+    self.size = size;
     let (pos, end_pos) = Self::calc_size(screen_size, position, size);
     self.vertices = Self::create_vertices(pos, end_pos, self.color);
   }

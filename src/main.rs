@@ -4,9 +4,7 @@ mod renderer;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use winit::event::{
-  ElementState, MouseScrollDelta, VirtualKeyCode, WindowEvent,
-};
+use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
 
 fn main() -> Result<(), anyhow::Error> {
   let args: Vec<String> = std::env::args().collect();
@@ -57,34 +55,10 @@ fn main() -> Result<(), anyhow::Error> {
       }
       WindowEvent::KeyboardInput { input, .. } => {
         if input.state == ElementState::Pressed {
-          let input = input.virtual_keycode.unwrap();
-          match input {
-            VirtualKeyCode::Up => {
-              if ren.code_view.cursor_line != 0 {
-                ren.code_view.cursor_line -= 1;
-                ren.code_view.input(ren.size);
-                ren.window.request_redraw();
-              }
-            }
-            VirtualKeyCode::Left => {
-              if ren.code_view.cursor_column != 0 {
-                ren.code_view.cursor_column -= 1;
-                ren.code_view.input(ren.size);
-                ren.window.request_redraw();
-              }
-            }
-            VirtualKeyCode::Down => {
-              ren.code_view.cursor_line += 1;
-              ren.code_view.input(ren.size);
-              ren.window.request_redraw();
-            }
-            VirtualKeyCode::Right => {
-              ren.code_view.cursor_column += 1;
-              ren.code_view.input(ren.size);
-              ren.window.request_redraw();
-            }
-            _ => {}
-          }
+          ren
+            .code_view
+            .input(ren.size, input.virtual_keycode.unwrap());
+          ren.window.request_redraw();
         }
       }
       _ => {}

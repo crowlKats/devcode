@@ -1,15 +1,17 @@
 use crate::renderer::rectangle::Rectangle;
-use wgpu_glyph::ab_glyph::Rect;
+use std::collections::HashMap;
 use wgpu_glyph::{HorizontalAlign, Layout, Region, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::event::VirtualKeyCode;
 
 pub struct CodeView {
   text: Vec<String>, // TODO: store as Vec<&str>
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
-  font_size: Rect,
+  font_height: f32,
+  font_width_map: HashMap<char, f32>,
   pub rect: Rectangle,
   pub cursor: Rectangle,
-  pub cursor_line: u32,
+  pub cursor_row: u32,
   pub cursor_column: u32,
   line_numbers_width: f32,
 }
@@ -21,7 +23,8 @@ impl CodeView {
 
   pub fn new(
     text: String,
-    font_size: Rect,
+    font_height: f32,
+    font_width_map: HashMap<char, f32>,
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
   ) -> Self {
@@ -30,8 +33,20 @@ impl CodeView {
     if text.ends_with('\n') {
       split_text.push(String::from(""));
     }
-    let line_count_digits_len = (split_text.len() as f32).log10().floor() + 1.0;
-    let line_numbers_width = line_count_digits_len * font_size.width();
+
+    let line_numbers_width = {
+      let mut max_line_width = 0.0;
+      for (i, _) in split_text.iter().enumerate() {
+        let line_width = i
+          .to_string()
+          .chars()
+          .fold(0.0, |acc, c| acc + font_width_map.get(&c).unwrap());
+        if line_width > max_line_width {
+          max_line_width = line_width;
+        }
+      }
+      max_line_width
+    };
 
     let rect = Rectangle::new(
       device,
@@ -49,11 +64,11 @@ impl CodeView {
       screen_size,
       PhysicalPosition {
         x: line_numbers_width + 20.0,
-        y: screen_size.height as f32 - font_size.height(),
+        y: screen_size.height as f32 - font_height,
       },
       PhysicalSize {
         width: 6,
-        height: font_size.height() as u32,
+        height: font_height as u32,
       },
       [0.7, 0.0, 0.0],
     );
@@ -67,25 +82,63 @@ impl CodeView {
     Self {
       text: split_text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0.0, y: 0.0 },
-      font_size,
+      font_height,
+      font_width_map,
       rect,
       cursor,
-      cursor_line: 0,
+      cursor_row: 0,
       cursor_column: 0,
       line_numbers_width,
     }
   }
 
-  pub fn input(&mut self, size: PhysicalSize<u32>) {
+  fn get_char(&self, row: u32, column: u32) -> char {
+    self.text[row as usize]
+      .chars()
+      .nth(column as usize)
+      .unwrap()
+  }
+  fn get_char_width(&self, row: u32, column: u32) -> f32 {
+    let c = self.get_char(row, column);
+    println!("{}", c);
+    *self.font_width_map.get(&c).unwrap()
+  }
+
+  pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
+    let mut x = 0f32;
+
+    // TODO: add wrap handling
+    match key {
+      VirtualKeyCode::Up => {
+        if self.cursor_row != 0 {
+          self.cursor_row -= 1;
+          x = -self.get_char_width(self.cursor_row, self.cursor_column);
+        }
+      }
+      VirtualKeyCode::Left => {
+        if self.cursor_column != 0 {
+          self.cursor_column -= 1;
+          x = -self.get_char_width(self.cursor_row, self.cursor_column);
+        }
+      }
+      VirtualKeyCode::Down => {
+        self.cursor_row += 1;
+        x = self.get_char_width(self.cursor_row, self.cursor_column);
+      }
+      VirtualKeyCode::Right => {
+        x = self.get_char_width(self.cursor_row, self.cursor_column);
+        self.cursor_column += 1;
+      }
+      _ => {}
+    }
+
     self.cursor.resize(
       size,
       PhysicalPosition {
-        x: self.line_numbers_width
-          + 20.0
-          + (self.cursor_column as f32 * self.font_size.width()),
+        x: self.cursor.position.x + x,
         y: size.height as f32
-          - self.font_size.height()
-          - (self.cursor_line as f32 * self.font_size.height()),
+          - self.font_height
+          - (self.cursor_row as f32 * self.font_height),
       },
       self.cursor.size,
     );
@@ -106,12 +159,10 @@ impl super::RenderElement for CodeView {
     self.cursor.resize(
       screen_size,
       PhysicalPosition {
-        x: self.line_numbers_width
-          + 20.0
-          + (self.cursor_column as f32 * self.font_size.width()),
+        x: self.cursor.position.x,
         y: screen_size.height as f32
-          - self.font_size.height()
-          - (self.cursor_line as f32 * self.font_size.height()),
+          - self.font_height
+          - (self.cursor_row as f32 * self.font_height),
       },
       self.cursor.size,
     );
@@ -126,36 +177,35 @@ impl super::RenderElement for CodeView {
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
     let mut line_count = 0;
-    let mut max_line_length = 0;
+    let mut max_line_width = 0.0;
     for line in &self.text {
       line_count += 1;
-      if line.len() > max_line_length {
-        max_line_length = line.len();
+      let line_width = line
+        .chars()
+        .fold(0.0, |acc, c| acc + self.font_width_map.get(&c).unwrap());
+      if line_width > max_line_width {
+        max_line_width = line_width;
       }
     }
-
-    let max_width = max_line_length as f64 * self.font_size.width() as f64;
 
     self.scroll_offset.x = (self.scroll_offset.x - offset.x)
       .max(
         (self.line_numbers_width as f64 + 20.0)
-          + (size.width as f64 - max_width),
+          + (size.width as f64 - max_line_width as f64),
       )
       .min(0.0);
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
-      .max(-((line_count - 3) as f32 * self.font_size.height()) as f64);
+      .max(-((line_count - 3) as f32 * self.font_height) as f64);
 
     self.cursor.resize(
       size,
       PhysicalPosition {
-        x: (self.line_numbers_width + 20.0)
-          + self.scroll_offset.x as f32
-          + (self.cursor_column as f32 * self.font_size.width()),
+        x: self.scroll_offset.x as f32 + self.cursor.position.x,
         y: size.height as f32
-          - self.font_size.height()
+          - self.font_height
           - self.scroll_offset.y as f32
-          - (self.cursor_line as f32 * self.font_size.height()),
+          - (self.cursor_row as f32 * self.font_height),
       },
       self.cursor.size,
     );
@@ -181,7 +231,7 @@ impl super::RenderElement for CodeView {
       screen_position: (self.line_numbers_width, self.scroll_offset.y as f32),
       text: vec![Text::new(&line_numbers)
         .with_color([0.9, 0.9, 0.9, 1.0])
-        .with_scale(self.font_size.height())],
+        .with_scale(self.font_height)],
       layout: Layout::default_wrap().h_align(HorizontalAlign::Right),
       ..Section::default()
     });
@@ -205,7 +255,7 @@ impl super::RenderElement for CodeView {
       ),
       text: vec![Text::new(&self.text.join("\n"))
         .with_color([0.9, 0.9, 0.9, 1.0])
-        .with_scale(self.font_size.height())],
+        .with_scale(self.font_height)],
       ..Section::default()
     });
 

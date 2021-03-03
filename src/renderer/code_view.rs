@@ -99,9 +99,10 @@ impl CodeView {
       .unwrap()
   }
   fn get_char_width(&self, row: u32, column: u32) -> f32 {
-    let c = self.get_char(row, column);
-    println!("{}", c);
-    *self.font_width_map.get(&c).unwrap()
+    *self
+      .font_width_map
+      .get(&self.get_char(row, column))
+      .unwrap()
   }
 
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {

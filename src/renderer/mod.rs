@@ -67,24 +67,14 @@ impl Renderer {
     let px_per_em = (13.0 / 72.0) * (96.0 * window.scale_factor() as f32);
     let units_per_em = font.units_per_em().unwrap();
     let height = font.height_unscaled();
+    let scale = (px_per_em / units_per_em) * height;
 
-    let font_size = font.glyph_bounds(
-      &font
-        .glyph_id('0')
-        .with_scale((px_per_em / units_per_em) * height),
-    );
+    let font_size = font.glyph_bounds(&font.glyph_id('0').with_scale(scale));
 
     let font_width_map = font
       .codepoint_ids()
       .map(|(glyph, c)| {
-        (
-          c,
-          font
-            .glyph_bounds(
-              &glyph.with_scale((px_per_em / units_per_em) * height),
-            )
-            .width(),
-        )
+        (c, font.glyph_bounds(&glyph.with_scale(scale)).width())
       })
       .collect::<_>();
 

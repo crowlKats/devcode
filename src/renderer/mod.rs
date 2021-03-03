@@ -76,7 +76,7 @@ impl Renderer {
       .map(|(glyph, c)| {
         (c, font.glyph_bounds(&glyph.with_scale(scale)).width())
       })
-      .collect::<_>();
+      .collect();
 
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font)
       .build(&device, RENDER_FORMAT);

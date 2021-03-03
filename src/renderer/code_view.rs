@@ -92,43 +92,100 @@ impl CodeView {
     }
   }
 
-  fn get_char(&self, row: u32, column: u32) -> char {
-    self.text[row as usize]
-      .chars()
-      .nth(column as usize)
-      .unwrap()
+  fn get_char(&self, row: u32, column: u32) -> Option<char> {
+    self.text[row as usize].chars().nth(column as usize)
   }
-  fn get_char_width(&self, row: u32, column: u32) -> f32 {
-    *self
-      .font_width_map
-      .get(&self.get_char(row, column))
-      .unwrap()
+  fn get_char_width(&self, row: u32, column: u32) -> Option<&f32> {
+    self
+      .get_char(row, column)
+      .map(|c| self.font_width_map.get(&c).unwrap())
   }
 
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    let mut x = 0f32;
+    let mut x = self.cursor.position.x - (self.line_numbers_width + 20.0);
 
-    // TODO: add wrap handling
     match key {
       VirtualKeyCode::Up => {
         if self.cursor_row != 0 {
           self.cursor_row -= 1;
-          x = -self.get_char_width(self.cursor_row, self.cursor_column);
+          x = 0.0;
+          if let Some(_) = self.get_char(self.cursor_row, self.cursor_column) {
+            for i in 0..self.cursor_column {
+              x += self.get_char_width(self.cursor_row, i).unwrap();
+            }
+          } else {
+            let mut count = 0;
+            for (i, _) in
+              self.text[self.cursor_row as usize].chars().enumerate()
+            {
+              count += 1;
+              x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+            }
+            self.cursor_column = count;
+          }
+        } else {
+          x = 0.0;
+          self.cursor_column = 0;
         }
       }
       VirtualKeyCode::Left => {
         if self.cursor_column != 0 {
           self.cursor_column -= 1;
-          x = -self.get_char_width(self.cursor_row, self.cursor_column);
+          x -= self
+            .get_char_width(self.cursor_row, self.cursor_column)
+            .unwrap();
+        } else if self.cursor_row != 0 {
+          self.cursor_row -= 1;
+          x = 0.0;
+          let mut count = 0;
+          for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
+          {
+            count += 1;
+            x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+          }
+          self.cursor_column = count;
         }
       }
       VirtualKeyCode::Down => {
-        self.cursor_row += 1;
-        x = self.get_char_width(self.cursor_row, self.cursor_column);
+        if self.cursor_row != self.text.len() as u32 {
+          self.cursor_row += 1;
+          x = 0.0;
+          if let Some(_) = self.get_char(self.cursor_row, self.cursor_column) {
+            for i in 0..self.cursor_column {
+              x += self.get_char_width(self.cursor_row, i).unwrap();
+            }
+          } else {
+            let mut count = 0;
+            for (i, _) in
+              self.text[self.cursor_row as usize].chars().enumerate()
+            {
+              count += 1;
+              x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+            }
+            self.cursor_column = count;
+          }
+        } else {
+          x = 0.0;
+          let mut count = 0;
+          for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
+          {
+            count += 1;
+            x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+          }
+          self.cursor_column = count;
+        }
       }
       VirtualKeyCode::Right => {
-        x = self.get_char_width(self.cursor_row, self.cursor_column);
-        self.cursor_column += 1;
+        if let Some(width) =
+          self.get_char_width(self.cursor_row, self.cursor_column)
+        {
+          x += width;
+          self.cursor_column += 1;
+        } else {
+          x = 0.0;
+          self.cursor_column = 0;
+          self.cursor_row += 1;
+        }
       }
       _ => {}
     }
@@ -136,7 +193,7 @@ impl CodeView {
     self.cursor.resize(
       size,
       PhysicalPosition {
-        x: self.cursor.position.x + x,
+        x: x + self.line_numbers_width + 20.0,
         y: size.height as f32
           - self.font_height
           - (self.cursor_row as f32 * self.font_height),

@@ -109,7 +109,7 @@ impl CodeView {
         if self.cursor_row != 0 {
           self.cursor_row -= 1;
           x = 0.0;
-          if let Some(_) = self.get_char(self.cursor_row, self.cursor_column) {
+          if self.get_char(self.cursor_row, self.cursor_column).is_some() {
             for i in 0..self.cursor_column {
               x += self.get_char_width(self.cursor_row, i).unwrap();
             }
@@ -150,7 +150,7 @@ impl CodeView {
         if self.cursor_row != self.text.len() as u32 {
           self.cursor_row += 1;
           x = 0.0;
-          if let Some(_) = self.get_char(self.cursor_row, self.cursor_column) {
+          if self.get_char(self.cursor_row, self.cursor_column).is_some() {
             for i in 0..self.cursor_column {
               x += self.get_char_width(self.cursor_row, i).unwrap();
             }

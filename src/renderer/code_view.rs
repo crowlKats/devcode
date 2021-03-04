@@ -22,6 +22,18 @@ impl CodeView {
     vec![&self.cursor, &self.rect]
   }
 
+  fn generate_glyph_text(&self) -> Vec<Text> {
+    self
+      .text
+      .iter()
+      .map(|s| {
+        Text::new(s)
+          .with_color([0.9, 0.9, 0.9, 1.0])
+          .with_scale(self.font_height)
+      })
+      .collect()
+  }
+
   pub fn new(
     text: String,
     font_height: f32,
@@ -326,9 +338,15 @@ impl super::RenderElement for CodeView {
         codeview_offset + self.scroll_offset.x as f32,
         self.scroll_offset.y as f32,
       ),
-      text: vec![Text::new(&self.text.join("\n"))
-        .with_color([0.9, 0.9, 0.9, 1.0])
-        .with_scale(self.font_height)],
+      text: self
+        .generate_glyph_text()
+        .iter()
+        .flat_map(|s| {
+          std::iter::once(*s).chain(std::iter::once(
+            Text::new("\n").with_scale(self.font_height),
+          ))
+        })
+        .collect(),
       ..Section::default()
     });
 

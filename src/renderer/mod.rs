@@ -138,8 +138,6 @@ impl Renderer {
 
     let frame = self.swap_chain.get_current_frame()?.output;
 
-    self.code_view.rect.write_buffer(&self.queue);
-    self.code_view.cursor.write_buffer(&self.queue);
     {
       let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: None,
@@ -161,6 +159,7 @@ impl Renderer {
 
       rpass.set_pipeline(&self.rectangle_render_pipeline);
       for rect in self.code_view.get_rects() {
+        rect.write_buffer(&self.queue);
         rpass.set_vertex_buffer(0, rect.vertex_buffer.slice(..));
         if let Some(ref region) = rect.region {
           rpass.set_scissor_rect(

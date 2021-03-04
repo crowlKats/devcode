@@ -5,14 +5,15 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
 pub struct CodeView {
-  text: Vec<String>, // TODO: store as Vec<&str>
+  text: Vec<String>,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_height: f32,
   font_width_map: HashMap<char, f32>,
   pub rect: Rectangle,
   pub cursor: Rectangle,
-  pub cursor_row: u32,
-  pub cursor_column: u32,
+  cursor_row: u32,
+  cursor_column: u32,
+  cursor_x_offset: f32,
   line_numbers_width: f32,
 }
 
@@ -88,6 +89,7 @@ impl CodeView {
       cursor,
       cursor_row: 0,
       cursor_column: 0,
+      cursor_x_offset: 0.0,
       line_numbers_width,
     }
   }
@@ -95,23 +97,23 @@ impl CodeView {
   fn get_char(&self, row: u32, column: u32) -> Option<char> {
     self.text[row as usize].chars().nth(column as usize)
   }
-  fn get_char_width(&self, row: u32, column: u32) -> Option<&f32> {
+
+  fn get_char_width(&self, row: u32, column: u32) -> Option<f32> {
     self
       .get_char(row, column)
-      .map(|c| self.font_width_map.get(&c).unwrap())
+      .map(|c| *self.font_width_map.get(&c).unwrap())
   }
 
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    let mut x = self.cursor.position.x - (self.line_numbers_width + 20.0);
-
     match key {
       VirtualKeyCode::Up => {
         if self.cursor_row != 0 {
           self.cursor_row -= 1;
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           if self.get_char(self.cursor_row, self.cursor_column).is_some() {
             for i in 0..self.cursor_column {
-              x += self.get_char_width(self.cursor_row, i).unwrap();
+              self.cursor_x_offset +=
+                self.get_char_width(self.cursor_row, i).unwrap();
             }
           } else {
             let mut count = 0;
@@ -119,29 +121,31 @@ impl CodeView {
               self.text[self.cursor_row as usize].chars().enumerate()
             {
               count += 1;
-              x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+              self.cursor_x_offset +=
+                self.get_char_width(self.cursor_row, i as u32).unwrap();
             }
             self.cursor_column = count;
           }
         } else {
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           self.cursor_column = 0;
         }
       }
       VirtualKeyCode::Left => {
         if self.cursor_column != 0 {
           self.cursor_column -= 1;
-          x -= self
+          self.cursor_x_offset -= self
             .get_char_width(self.cursor_row, self.cursor_column)
             .unwrap();
         } else if self.cursor_row != 0 {
           self.cursor_row -= 1;
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           let mut count = 0;
           for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
           {
             count += 1;
-            x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+            self.cursor_x_offset +=
+              self.get_char_width(self.cursor_row, i as u32).unwrap();
           }
           self.cursor_column = count;
         }
@@ -149,10 +153,11 @@ impl CodeView {
       VirtualKeyCode::Down => {
         if self.cursor_row != self.text.len() as u32 {
           self.cursor_row += 1;
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           if self.get_char(self.cursor_row, self.cursor_column).is_some() {
             for i in 0..self.cursor_column {
-              x += self.get_char_width(self.cursor_row, i).unwrap();
+              self.cursor_x_offset +=
+                self.get_char_width(self.cursor_row, i).unwrap();
             }
           } else {
             let mut count = 0;
@@ -160,17 +165,19 @@ impl CodeView {
               self.text[self.cursor_row as usize].chars().enumerate()
             {
               count += 1;
-              x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+              self.cursor_x_offset +=
+                self.get_char_width(self.cursor_row, i as u32).unwrap();
             }
             self.cursor_column = count;
           }
         } else {
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           let mut count = 0;
           for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
           {
             count += 1;
-            x += self.get_char_width(self.cursor_row, i as u32).unwrap();
+            self.cursor_x_offset +=
+              self.get_char_width(self.cursor_row, i as u32).unwrap();
           }
           self.cursor_column = count;
         }
@@ -179,10 +186,10 @@ impl CodeView {
         if let Some(width) =
           self.get_char_width(self.cursor_row, self.cursor_column)
         {
-          x += width;
+          self.cursor_x_offset += width;
           self.cursor_column += 1;
         } else {
-          x = 0.0;
+          self.cursor_x_offset = 0.0;
           self.cursor_column = 0;
           self.cursor_row += 1;
         }
@@ -193,8 +200,12 @@ impl CodeView {
     self.cursor.resize(
       size,
       PhysicalPosition {
-        x: x + self.line_numbers_width + 20.0,
+        x: self.scroll_offset.x as f32
+          + self.line_numbers_width
+          + 20.0
+          + self.cursor_x_offset,
         y: size.height as f32
+          - self.scroll_offset.y as f32
           - self.font_height
           - (self.cursor_row as f32 * self.font_height),
       },
@@ -259,7 +270,10 @@ impl super::RenderElement for CodeView {
     self.cursor.resize(
       size,
       PhysicalPosition {
-        x: self.scroll_offset.x as f32 + self.cursor.position.x,
+        x: self.scroll_offset.x as f32
+          + self.line_numbers_width
+          + 20.0
+          + self.cursor_x_offset,
         y: size.height as f32
           - self.font_height
           - self.scroll_offset.y as f32

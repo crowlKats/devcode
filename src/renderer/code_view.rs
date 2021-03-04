@@ -11,8 +11,8 @@ pub struct CodeView {
   font_width_map: HashMap<char, f32>,
   pub rect: Rectangle,
   pub cursor: Rectangle,
-  cursor_row: u32,
-  cursor_column: u32,
+  cursor_row: usize,
+  cursor_column: usize,
   cursor_x_offset: f32,
   line_numbers_width: f32,
 }
@@ -94,17 +94,36 @@ impl CodeView {
     }
   }
 
-  fn get_char(&self, row: u32, column: u32) -> Option<char> {
-    self.text[row as usize].chars().nth(column as usize)
+  fn get_char(&self, row: usize, column: usize) -> Option<char> {
+    self.text[row].chars().nth(column)
   }
 
-  fn get_char_width(&self, row: u32, column: u32) -> Option<f32> {
+  fn get_char_width(&self, row: usize, column: usize) -> Option<f32> {
     self
       .get_char(row, column)
       .map(|c| *self.font_width_map.get(&c).unwrap())
   }
 
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
+    let mut handle_left = || {
+      if self.cursor_column != 0 {
+        self.cursor_column -= 1;
+        self.cursor_x_offset -= self
+          .get_char_width(self.cursor_row, self.cursor_column)
+          .unwrap();
+      } else if self.cursor_row != 0 {
+        self.cursor_row -= 1;
+        self.cursor_x_offset = 0.0;
+        let mut count = 0;
+        for (i, _) in self.text[self.cursor_row].chars().enumerate() {
+          count += 1;
+          self.cursor_x_offset +=
+            self.get_char_width(self.cursor_row, i).unwrap();
+        }
+        self.cursor_column = count;
+      }
+    };
+
     match key {
       VirtualKeyCode::Up => {
         if self.cursor_row != 0 {
@@ -117,12 +136,10 @@ impl CodeView {
             }
           } else {
             let mut count = 0;
-            for (i, _) in
-              self.text[self.cursor_row as usize].chars().enumerate()
-            {
+            for (i, _) in self.text[self.cursor_row].chars().enumerate() {
               count += 1;
               self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i as u32).unwrap();
+                self.get_char_width(self.cursor_row, i).unwrap();
             }
             self.cursor_column = count;
           }
@@ -131,27 +148,9 @@ impl CodeView {
           self.cursor_column = 0;
         }
       }
-      VirtualKeyCode::Left => {
-        if self.cursor_column != 0 {
-          self.cursor_column -= 1;
-          self.cursor_x_offset -= self
-            .get_char_width(self.cursor_row, self.cursor_column)
-            .unwrap();
-        } else if self.cursor_row != 0 {
-          self.cursor_row -= 1;
-          self.cursor_x_offset = 0.0;
-          let mut count = 0;
-          for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
-          {
-            count += 1;
-            self.cursor_x_offset +=
-              self.get_char_width(self.cursor_row, i as u32).unwrap();
-          }
-          self.cursor_column = count;
-        }
-      }
+      VirtualKeyCode::Left => handle_left(),
       VirtualKeyCode::Down => {
-        if self.cursor_row != self.text.len() as u32 {
+        if self.cursor_row != self.text.len() {
           self.cursor_row += 1;
           self.cursor_x_offset = 0.0;
           if self.get_char(self.cursor_row, self.cursor_column).is_some() {
@@ -161,23 +160,20 @@ impl CodeView {
             }
           } else {
             let mut count = 0;
-            for (i, _) in
-              self.text[self.cursor_row as usize].chars().enumerate()
-            {
+            for (i, _) in self.text[self.cursor_row].chars().enumerate() {
               count += 1;
               self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i as u32).unwrap();
+                self.get_char_width(self.cursor_row, i).unwrap();
             }
             self.cursor_column = count;
           }
         } else {
           self.cursor_x_offset = 0.0;
           let mut count = 0;
-          for (i, _) in self.text[self.cursor_row as usize].chars().enumerate()
-          {
+          for (i, _) in self.text[self.cursor_row].chars().enumerate() {
             count += 1;
             self.cursor_x_offset +=
-              self.get_char_width(self.cursor_row, i as u32).unwrap();
+              self.get_char_width(self.cursor_row, i).unwrap();
           }
           self.cursor_column = count;
         }
@@ -193,6 +189,11 @@ impl CodeView {
           self.cursor_column = 0;
           self.cursor_row += 1;
         }
+      }
+      VirtualKeyCode::Back => {
+        handle_left();
+
+        self.text[self.cursor_row].remove(self.cursor_column);
       }
       _ => {}
     }

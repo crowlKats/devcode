@@ -78,10 +78,11 @@ impl Renderer {
       })
       .collect();
 
-    let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font)
+    let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
     let code_view = code_view::CodeView::new(
+      font,
       text,
       font_size.height(),
       font_width_map,

@@ -1,6 +1,10 @@
 use crate::renderer::rectangle::Rectangle;
 use std::collections::HashMap;
-use wgpu_glyph::{HorizontalAlign, Layout, Region, Section, Text};
+use wgpu_glyph::ab_glyph::{Font, FontArc};
+use wgpu_glyph::{
+  GlyphPositioner, HorizontalAlign, Layout, Region, Section, SectionGeometry,
+  Text,
+};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
@@ -12,6 +16,7 @@ struct Cursor {
 }
 
 pub struct CodeView {
+  font: FontArc,
   text: Vec<String>,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_height: f32,
@@ -38,7 +43,39 @@ impl CodeView {
       .collect()
   }
 
+  fn cursor_x_position(&self, row: usize, column: usize) -> Option<f32> {
+    let text = Text::new(&self.text[row]).with_scale(self.font_height);
+    let layout = Layout::default_wrap();
+
+    let x = layout.calculate_glyphs(
+      &[self.font.clone()],
+      &SectionGeometry {
+        screen_position: (
+          self.scroll_offset.x as f32,
+          self.scroll_offset.y as f32,
+        ),
+        ..Default::default()
+      },
+      &[text],
+    );
+
+    //println!("{} {:#?}", column, x.get(column));
+
+    if let Some(g) = x.get(column) {
+      Some(g.glyph.position.x)
+    } else if column != 0 {
+      if let Some(g) = x.get(column - 1) {
+        Some(g.glyph.position.x + self.font.glyph_bounds(&g.glyph).width())
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
   pub fn new(
+    font: FontArc,
     text: String,
     font_height: f32,
     font_width_map: HashMap<char, f32>,
@@ -51,6 +88,7 @@ impl CodeView {
       split_text.push(String::from(""));
     }
 
+    // TODO: use Layout::calculate_glyphs
     let line_numbers_width = {
       let mut max_line_width = 0.0;
       for (i, _) in split_text.iter().enumerate() {
@@ -97,6 +135,7 @@ impl CodeView {
     });
 
     Self {
+      font,
       text: split_text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0.0, y: 0.0 },
       font_height,
@@ -112,33 +151,19 @@ impl CodeView {
     }
   }
 
-  fn get_char(&self, row: usize, column: usize) -> Option<char> {
-    self.text[row].chars().nth(column)
-  }
-
-  fn get_char_width(&self, row: usize, column: usize) -> Option<f32> {
-    self
-      .get_char(row, column)
-      .map(|c| *self.font_width_map.get(&c).unwrap())
-  }
-
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
     let mut handle_left = || {
       if self.cursor.column != 0 {
         self.cursor.column -= 1;
-        self.cursor.x_offset -= self
-          .get_char_width(self.cursor.row, self.cursor.column)
+        self.cursor.x_offset = self
+          .cursor_x_position(self.cursor.row, self.cursor.column)
           .unwrap();
       } else if self.cursor.row != 0 {
         self.cursor.row -= 1;
-        self.cursor.x_offset = 0.0;
-        let mut count = 0;
-        for (i, _) in self.text[self.cursor.row].chars().enumerate() {
-          count += 1;
-          self.cursor.x_offset +=
-            self.get_char_width(self.cursor.row, i).unwrap();
-        }
-        self.cursor.column = count;
+        self.cursor.column = self.text[self.cursor.row].len();
+        self.cursor.x_offset = self
+          .cursor_x_position(self.cursor.row, self.cursor.column)
+          .unwrap_or(0.0);
       }
     };
 
@@ -146,20 +171,15 @@ impl CodeView {
       VirtualKeyCode::Up => {
         if self.cursor.row != 0 {
           self.cursor.row -= 1;
-          self.cursor.x_offset = 0.0;
-          if self.get_char(self.cursor.row, self.cursor.column).is_some() {
-            for i in 0..self.cursor.column {
-              self.cursor.x_offset +=
-                self.get_char_width(self.cursor.row, i).unwrap();
-            }
+          if let Some(x) =
+            self.cursor_x_position(self.cursor.row, self.cursor.column)
+          {
+            self.cursor.x_offset = x;
           } else {
-            let mut count = 0;
-            for (i, _) in self.text[self.cursor.row].chars().enumerate() {
-              count += 1;
-              self.cursor.x_offset +=
-                self.get_char_width(self.cursor.row, i).unwrap();
-            }
-            self.cursor.column = count;
+            self.cursor.column = self.text[self.cursor.row].len();
+            self.cursor.x_offset = self
+              .cursor_x_position(self.cursor.row, self.cursor.column)
+              .unwrap_or(0.0);
           }
         } else {
           self.cursor.x_offset = 0.0;
@@ -168,40 +188,32 @@ impl CodeView {
       }
       VirtualKeyCode::Left => handle_left(),
       VirtualKeyCode::Down => {
+        // TODO: handle last line
         if self.cursor.row != self.text.len() {
           self.cursor.row += 1;
-          self.cursor.x_offset = 0.0;
-          if self.get_char(self.cursor.row, self.cursor.column).is_some() {
-            for i in 0..self.cursor.column {
-              self.cursor.x_offset +=
-                self.get_char_width(self.cursor.row, i).unwrap();
-            }
+          if let Some(x) =
+            self.cursor_x_position(self.cursor.row, self.cursor.column)
+          {
+            self.cursor.x_offset = x;
           } else {
-            let mut count = 0;
-            for (i, _) in self.text[self.cursor.row].chars().enumerate() {
-              count += 1;
-              self.cursor.x_offset +=
-                self.get_char_width(self.cursor.row, i).unwrap();
-            }
-            self.cursor.column = count;
+            self.cursor.column = self.text[self.cursor.row].len();
+            self.cursor.x_offset = self
+              .cursor_x_position(self.cursor.row, self.cursor.column)
+              .unwrap_or(0.0);
           }
         } else {
-          self.cursor.x_offset = 0.0;
-          let mut count = 0;
-          for (i, _) in self.text[self.cursor.row].chars().enumerate() {
-            count += 1;
-            self.cursor.x_offset +=
-              self.get_char_width(self.cursor.row, i).unwrap();
-          }
-          self.cursor.column = count;
+          self.cursor.column = self.text[self.cursor.row].len();
+          self.cursor.x_offset = self
+            .cursor_x_position(self.cursor.row, self.cursor.column)
+            .unwrap();
         }
       }
       VirtualKeyCode::Right => {
+        self.cursor.column += 1;
         if let Some(width) =
-          self.get_char_width(self.cursor.row, self.cursor.column)
+          self.cursor_x_position(self.cursor.row, self.cursor.column)
         {
-          self.cursor.x_offset += width;
-          self.cursor.column += 1;
+          self.cursor.x_offset = width;
         } else {
           self.cursor.x_offset = 0.0;
           self.cursor.column = 0;

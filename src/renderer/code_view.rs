@@ -4,22 +4,26 @@ use wgpu_glyph::{HorizontalAlign, Layout, Region, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
+struct Cursor {
+  rect: Rectangle,
+  row: usize,
+  column: usize,
+  x_offset: f32,
+}
+
 pub struct CodeView {
   text: Vec<String>,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_height: f32,
   font_width_map: HashMap<char, f32>,
-  pub rect: Rectangle,
-  pub cursor: Rectangle,
-  cursor_row: usize,
-  cursor_column: usize,
-  cursor_x_offset: f32,
+  rect: Rectangle,
+  cursor: Cursor,
   line_numbers_width: f32,
 }
 
 impl CodeView {
   pub fn get_rects(&self) -> Vec<&Rectangle> {
-    vec![&self.cursor, &self.rect]
+    vec![&self.cursor.rect, &self.rect]
   }
 
   fn generate_glyph_text(&self) -> Vec<Text> {
@@ -98,10 +102,12 @@ impl CodeView {
       font_height,
       font_width_map,
       rect,
-      cursor,
-      cursor_row: 0,
-      cursor_column: 0,
-      cursor_x_offset: 0.0,
+      cursor: Cursor {
+        rect: cursor,
+        row: 0,
+        column: 0,
+        x_offset: 0.0,
+      },
       line_numbers_width,
     }
   }
@@ -118,111 +124,111 @@ impl CodeView {
 
   pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
     let mut handle_left = || {
-      if self.cursor_column != 0 {
-        self.cursor_column -= 1;
-        self.cursor_x_offset -= self
-          .get_char_width(self.cursor_row, self.cursor_column)
+      if self.cursor.column != 0 {
+        self.cursor.column -= 1;
+        self.cursor.x_offset -= self
+          .get_char_width(self.cursor.row, self.cursor.column)
           .unwrap();
-      } else if self.cursor_row != 0 {
-        self.cursor_row -= 1;
-        self.cursor_x_offset = 0.0;
+      } else if self.cursor.row != 0 {
+        self.cursor.row -= 1;
+        self.cursor.x_offset = 0.0;
         let mut count = 0;
-        for (i, _) in self.text[self.cursor_row].chars().enumerate() {
+        for (i, _) in self.text[self.cursor.row].chars().enumerate() {
           count += 1;
-          self.cursor_x_offset +=
-            self.get_char_width(self.cursor_row, i).unwrap();
+          self.cursor.x_offset +=
+            self.get_char_width(self.cursor.row, i).unwrap();
         }
-        self.cursor_column = count;
+        self.cursor.column = count;
       }
     };
 
     match key {
       VirtualKeyCode::Up => {
-        if self.cursor_row != 0 {
-          self.cursor_row -= 1;
-          self.cursor_x_offset = 0.0;
-          if self.get_char(self.cursor_row, self.cursor_column).is_some() {
-            for i in 0..self.cursor_column {
-              self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i).unwrap();
+        if self.cursor.row != 0 {
+          self.cursor.row -= 1;
+          self.cursor.x_offset = 0.0;
+          if self.get_char(self.cursor.row, self.cursor.column).is_some() {
+            for i in 0..self.cursor.column {
+              self.cursor.x_offset +=
+                self.get_char_width(self.cursor.row, i).unwrap();
             }
           } else {
             let mut count = 0;
-            for (i, _) in self.text[self.cursor_row].chars().enumerate() {
+            for (i, _) in self.text[self.cursor.row].chars().enumerate() {
               count += 1;
-              self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i).unwrap();
+              self.cursor.x_offset +=
+                self.get_char_width(self.cursor.row, i).unwrap();
             }
-            self.cursor_column = count;
+            self.cursor.column = count;
           }
         } else {
-          self.cursor_x_offset = 0.0;
-          self.cursor_column = 0;
+          self.cursor.x_offset = 0.0;
+          self.cursor.column = 0;
         }
       }
       VirtualKeyCode::Left => handle_left(),
       VirtualKeyCode::Down => {
-        if self.cursor_row != self.text.len() {
-          self.cursor_row += 1;
-          self.cursor_x_offset = 0.0;
-          if self.get_char(self.cursor_row, self.cursor_column).is_some() {
-            for i in 0..self.cursor_column {
-              self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i).unwrap();
+        if self.cursor.row != self.text.len() {
+          self.cursor.row += 1;
+          self.cursor.x_offset = 0.0;
+          if self.get_char(self.cursor.row, self.cursor.column).is_some() {
+            for i in 0..self.cursor.column {
+              self.cursor.x_offset +=
+                self.get_char_width(self.cursor.row, i).unwrap();
             }
           } else {
             let mut count = 0;
-            for (i, _) in self.text[self.cursor_row].chars().enumerate() {
+            for (i, _) in self.text[self.cursor.row].chars().enumerate() {
               count += 1;
-              self.cursor_x_offset +=
-                self.get_char_width(self.cursor_row, i).unwrap();
+              self.cursor.x_offset +=
+                self.get_char_width(self.cursor.row, i).unwrap();
             }
-            self.cursor_column = count;
+            self.cursor.column = count;
           }
         } else {
-          self.cursor_x_offset = 0.0;
+          self.cursor.x_offset = 0.0;
           let mut count = 0;
-          for (i, _) in self.text[self.cursor_row].chars().enumerate() {
+          for (i, _) in self.text[self.cursor.row].chars().enumerate() {
             count += 1;
-            self.cursor_x_offset +=
-              self.get_char_width(self.cursor_row, i).unwrap();
+            self.cursor.x_offset +=
+              self.get_char_width(self.cursor.row, i).unwrap();
           }
-          self.cursor_column = count;
+          self.cursor.column = count;
         }
       }
       VirtualKeyCode::Right => {
         if let Some(width) =
-          self.get_char_width(self.cursor_row, self.cursor_column)
+          self.get_char_width(self.cursor.row, self.cursor.column)
         {
-          self.cursor_x_offset += width;
-          self.cursor_column += 1;
+          self.cursor.x_offset += width;
+          self.cursor.column += 1;
         } else {
-          self.cursor_x_offset = 0.0;
-          self.cursor_column = 0;
-          self.cursor_row += 1;
+          self.cursor.x_offset = 0.0;
+          self.cursor.column = 0;
+          self.cursor.row += 1;
         }
       }
       VirtualKeyCode::Back => {
         handle_left();
 
-        self.text[self.cursor_row].remove(self.cursor_column);
+        self.text[self.cursor.row].remove(self.cursor.column);
       }
       _ => {}
     }
 
-    self.cursor.resize(
+    self.cursor.rect.resize(
       size,
       PhysicalPosition {
         x: self.scroll_offset.x as f32
           + self.line_numbers_width
           + 20.0
-          + self.cursor_x_offset,
+          + self.cursor.x_offset,
         y: size.height as f32
           - self.scroll_offset.y as f32
           - self.font_height
-          - (self.cursor_row as f32 * self.font_height),
+          - (self.cursor.row as f32 * self.font_height),
       },
-      self.cursor.size,
+      self.cursor.rect.size,
     );
   }
 }
@@ -238,18 +244,18 @@ impl super::RenderElement for CodeView {
       },
     );
 
-    self.cursor.resize(
+    self.cursor.rect.resize(
       screen_size,
       PhysicalPosition {
-        x: self.cursor.position.x,
+        x: self.cursor.rect.position.x,
         y: screen_size.height as f32
           - self.font_height
-          - (self.cursor_row as f32 * self.font_height),
+          - (self.cursor.row as f32 * self.font_height),
       },
-      self.cursor.size,
+      self.cursor.rect.size,
     );
 
-    self.cursor.region = Some(Region {
+    self.cursor.rect.region = Some(Region {
       x: self.line_numbers_width as u32 + 20,
       y: 0,
       width: screen_size.width - (self.line_numbers_width as u32 + 20),
@@ -280,19 +286,19 @@ impl super::RenderElement for CodeView {
       .min(0.0)
       .max(-((line_count - 3) as f32 * self.font_height) as f64);
 
-    self.cursor.resize(
+    self.cursor.rect.resize(
       size,
       PhysicalPosition {
         x: self.scroll_offset.x as f32
           + self.line_numbers_width
           + 20.0
-          + self.cursor_x_offset,
+          + self.cursor.x_offset,
         y: size.height as f32
           - self.font_height
           - self.scroll_offset.y as f32
-          - (self.cursor_row as f32 * self.font_height),
+          - (self.cursor.row as f32 * self.font_height),
       },
-      self.cursor.size,
+      self.cursor.rect.size,
     );
   }
 

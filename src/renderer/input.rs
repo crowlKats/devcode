@@ -1,4 +1,5 @@
 use crate::renderer::rectangle::{Rectangle, Region};
+use unicode_segmentation::UnicodeSegmentation;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
 use wgpu_glyph::ab_glyph::{Font, FontArc};
@@ -274,6 +275,7 @@ pub fn input_char(
   scroll_offset: PhysicalPosition<f32>,
 ) -> f32 {
   match ch {
+    // backspace
     '\u{7f}' => {
       input_special(
         size,
@@ -285,15 +287,21 @@ pub fn input_char(
         offset,
         scroll_offset,
       );
+      // TODO: handle backspace properly
       if cursor.column != 0 {
-        text[cursor.row].remove(cursor.column);
+        let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
+        let index = graphemes_indices.nth(cursor.column).unwrap().0;
+        text[cursor.row].remove(index);
       } else if cursor.row != 0 {
         let removed = text.remove(cursor.row);
         text[cursor.row - 1] += &removed;
       }
     }
+    // enter
     '\r' => {
-      let after_enter = text[cursor.row].split_off(cursor.column);
+      let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
+      let index = graphemes_indices.nth(cursor.column).unwrap().0;
+      let after_enter = text[cursor.row].split_off(index);
       text.insert(cursor.row + 1, after_enter);
       input_special(
         size,
@@ -307,16 +315,9 @@ pub fn input_char(
       );
     }
     _ => {
-      println!(
-        "{} {} {} ({})",
-        text[cursor.row].len(),
-        cursor.column,
-        ch,
-        ch.escape_unicode(),
-      );
-      assert!(text[cursor.row].is_char_boundary(cursor.column));
-      println!("foo");
-      text[cursor.row].insert(cursor.column, ch);
+      let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
+      let index = graphemes_indices.nth(cursor.column).unwrap().0;
+      text[cursor.row].insert(index, ch);
       input_special(
         size,
         VirtualKeyCode::Right,

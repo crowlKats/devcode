@@ -274,27 +274,40 @@ pub fn input_char(
   offset: PhysicalPosition<f32>,
   scroll_offset: PhysicalPosition<f32>,
 ) -> f32 {
+  // TODO: deduplicate long input_special calls
   match ch {
     // backspace
     '\u{7f}' => {
-      input_special(
-        size,
-        VirtualKeyCode::Left,
-        text,
-        cursor,
-        font.clone(),
-        font_height,
-        offset,
-        scroll_offset,
-      );
-      // TODO: handle backspace properly
       if cursor.column != 0 {
         let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
-        let index = graphemes_indices.nth(cursor.column).unwrap().0;
+        let index = graphemes_indices.nth(cursor.column - 1).unwrap().0;
         text[cursor.row].remove(index);
+        input_special(
+          size,
+          VirtualKeyCode::Left,
+          text,
+          cursor,
+          font.clone(),
+          font_height,
+          offset,
+          scroll_offset,
+        );
       } else if cursor.row != 0 {
+        // TODO: fix cursor position
         let removed = text.remove(cursor.row);
-        text[cursor.row - 1] += &removed;
+
+        input_special(
+          size,
+          VirtualKeyCode::Left,
+          text,
+          cursor,
+          font.clone(),
+          font_height,
+          offset,
+          scroll_offset,
+        );
+
+        text[cursor.row] += &removed;
       }
     }
     // enter

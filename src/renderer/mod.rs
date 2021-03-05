@@ -1,7 +1,6 @@
 mod code_view;
 mod rectangle;
 
-use bytemuck::{Pod, Zeroable};
 use futures::task::SpawnExt;
 use wgpu_glyph::ab_glyph::Font;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -210,11 +209,4 @@ trait RenderElement {
     target: &wgpu::TextureView,
     size: PhysicalSize<u32>,
   );
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-struct Vertex {
-  position: [f32; 2],
-  color: [f32; 3],
 }

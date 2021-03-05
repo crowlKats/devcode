@@ -1,13 +1,13 @@
-use crate::renderer::rectangle::Rectangle;
+use crate::renderer::rectangle::{Rectangle, Region};
 use std::collections::HashMap;
 use wgpu_glyph::ab_glyph::{Font, FontArc};
 use wgpu_glyph::{
-  GlyphPositioner, HorizontalAlign, Layout, Region, Section, SectionGeometry,
-  Text,
+  GlyphPositioner, HorizontalAlign, Layout, Section, SectionGeometry, Text,
 };
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
+#[derive(Debug)]
 struct Cursor {
   rect: Rectangle,
   row: usize,
@@ -20,10 +20,10 @@ pub struct CodeView {
   text: Vec<String>,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
   font_height: f32,
-  font_width_map: HashMap<char, f32>,
   rect: Rectangle,
   cursor: Cursor,
   line_numbers_width: f32,
+  max_line_length: f32,
 }
 
 impl CodeView {
@@ -47,7 +47,7 @@ impl CodeView {
     let text = Text::new(&self.text[row]).with_scale(self.font_height);
     let layout = Layout::default_wrap();
 
-    let x = layout.calculate_glyphs(
+    let section_glyphs = layout.calculate_glyphs(
       &[self.font.clone()],
       &SectionGeometry {
         screen_position: (
@@ -59,19 +59,46 @@ impl CodeView {
       &[text],
     );
 
-    //println!("{} {:#?}", column, x.get(column));
-
-    if let Some(g) = x.get(column) {
-      Some(g.glyph.position.x)
+    if let Some(section_glyph) = section_glyphs.get(column) {
+      Some(section_glyph.glyph.position.x)
     } else if column != 0 {
-      if let Some(g) = x.get(column - 1) {
-        Some(g.glyph.position.x + self.font.glyph_bounds(&g.glyph).width())
+      if let Some(section_glyph) = section_glyphs.get(column - 1) {
+        Some(
+          section_glyph.glyph.position.x
+            + self.font.glyph_bounds(&section_glyph.glyph).width(),
+        )
       } else {
         None
       }
     } else {
       None
     }
+  }
+
+  fn max_line_length(lines: &[String], font: FontArc, font_height: f32) -> f32 {
+    let mut max_line_width = 0.0;
+    let layout = Layout::default_wrap();
+    for line in lines {
+      let text = Text::new(line).with_scale(font_height);
+      let section_glyphs = layout.calculate_glyphs(
+        &[font.clone()],
+        &SectionGeometry {
+          ..Default::default()
+        },
+        &[text],
+      );
+
+      if let Some(section_glyph) = section_glyphs.last() {
+        let width = section_glyph.glyph.position.x
+          + font.glyph_bounds(&section_glyph.glyph).width();
+
+        if width > max_line_width {
+          max_line_width = width;
+        }
+      }
+    }
+
+    max_line_width
   }
 
   pub fn new(
@@ -134,12 +161,14 @@ impl CodeView {
       height: screen_size.height,
     });
 
+    let max_line_length =
+      Self::max_line_length(&split_text, font.clone(), font_height);
+
     Self {
       font,
       text: split_text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0.0, y: 0.0 },
       font_height,
-      font_width_map,
       rect,
       cursor: Cursor {
         rect: cursor,
@@ -148,6 +177,7 @@ impl CodeView {
         x_offset: 0.0,
       },
       line_numbers_width,
+      max_line_length,
     }
   }
 
@@ -171,10 +201,10 @@ impl CodeView {
       VirtualKeyCode::Up => {
         if self.cursor.row != 0 {
           self.cursor.row -= 1;
-          if let Some(x) =
+          if let Some(offset) =
             self.cursor_x_position(self.cursor.row, self.cursor.column)
           {
-            self.cursor.x_offset = x;
+            self.cursor.x_offset = offset;
           } else {
             self.cursor.column = self.text[self.cursor.row].len();
             self.cursor.x_offset = self
@@ -191,10 +221,10 @@ impl CodeView {
         // TODO: handle last line
         if self.cursor.row != self.text.len() {
           self.cursor.row += 1;
-          if let Some(x) =
+          if let Some(offset) =
             self.cursor_x_position(self.cursor.row, self.cursor.column)
           {
-            self.cursor.x_offset = x;
+            self.cursor.x_offset = offset;
           } else {
             self.cursor.column = self.text[self.cursor.row].len();
             self.cursor.x_offset = self
@@ -210,10 +240,10 @@ impl CodeView {
       }
       VirtualKeyCode::Right => {
         self.cursor.column += 1;
-        if let Some(width) =
+        if let Some(offset) =
           self.cursor_x_position(self.cursor.row, self.cursor.column)
         {
-          self.cursor.x_offset = width;
+          self.cursor.x_offset = offset;
         } else {
           self.cursor.x_offset = 0.0;
           self.cursor.column = 0;
@@ -223,7 +253,12 @@ impl CodeView {
       VirtualKeyCode::Back => {
         handle_left();
 
-        self.text[self.cursor.row].remove(self.cursor.column);
+        if self.cursor.column != 0 {
+          self.text[self.cursor.row].remove(self.cursor.column);
+        } else if self.cursor.row != 0 {
+          let removed = self.text.remove(self.cursor.row);
+          self.text[self.cursor.row - 1] += &removed;
+        }
       }
       _ => {}
     }
@@ -276,27 +311,15 @@ impl super::RenderElement for CodeView {
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
-    let mut line_count = 0;
-    let mut max_line_width = 0.0;
-    for line in &self.text {
-      line_count += 1;
-      let line_width = line
-        .chars()
-        .fold(0.0, |acc, c| acc + self.font_width_map.get(&c).unwrap());
-      if line_width > max_line_width {
-        max_line_width = line_width;
-      }
-    }
-
     self.scroll_offset.x = (self.scroll_offset.x - offset.x)
       .max(
-        (self.line_numbers_width as f64 + 20.0)
-          + (size.width as f64 - max_line_width as f64),
+        (size.width as f64 - (self.line_numbers_width as f64 + 20.0))
+          - self.max_line_length as f64,
       )
       .min(0.0);
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
-      .max(-((line_count - 3) as f32 * self.font_height) as f64);
+      .max(-((self.text.len() - 3) as f32 * self.font_height) as f64);
 
     self.cursor.rect.resize(
       size,

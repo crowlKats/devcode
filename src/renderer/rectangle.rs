@@ -1,11 +1,27 @@
+use bytemuck::{Pod, Zeroable};
 use std::borrow::Cow;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::Region;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+struct Vertex {
+  position: [f32; 2],
+  color: [f32; 3],
+}
+
+#[derive(Debug)]
+pub struct Region {
+  pub x: u32,
+  pub y: u32,
+  pub width: u32,
+  pub height: u32,
+}
+
+#[derive(Debug)]
 pub struct Rectangle {
   pub vertex_buffer: wgpu::Buffer,
-  vertices: [super::Vertex; 4],
+  vertices: [Vertex; 4],
   color: [f32; 3],
   pub region: Option<Region>,
   pub size: PhysicalSize<u32>,
@@ -17,21 +33,21 @@ impl Rectangle {
     position: PhysicalPosition<f32>,
     end_position: PhysicalPosition<f32>,
     color: [f32; 3],
-  ) -> [super::Vertex; 4] {
+  ) -> [Vertex; 4] {
     [
-      super::Vertex {
+      Vertex {
         position: [position.x, position.y],
         color,
       }, // top left
-      super::Vertex {
+      Vertex {
         position: [position.x + end_position.x, position.y],
         color,
       }, // top right
-      super::Vertex {
+      Vertex {
         position: [position.x, position.y + end_position.y],
         color,
       }, // bottom left
-      super::Vertex {
+      Vertex {
         position: [position.x + end_position.x, position.y + end_position.y],
         color,
       }, // bottom right
@@ -61,8 +77,7 @@ impl Rectangle {
         module: &shader,
         entry_point: "vs_main",
         buffers: &[wgpu::VertexBufferLayout {
-          array_stride: std::mem::size_of::<super::Vertex>()
-            as wgpu::BufferAddress,
+          array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
           step_mode: wgpu::InputStepMode::Vertex,
           attributes: &wgpu::vertex_attr_array![0 => Float2, 1 => Float3],
         }],

@@ -2,6 +2,7 @@
 
 mod renderer;
 
+use renderer::input::TextInput;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use winit::event::{ElementState, MouseScrollDelta, WindowEvent};

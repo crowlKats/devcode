@@ -1,4 +1,5 @@
 mod code_view;
+pub mod input;
 mod rectangle;
 
 use futures::task::SpawnExt;
@@ -209,4 +210,5 @@ trait RenderElement {
     target: &wgpu::TextureView,
     size: PhysicalSize<u32>,
   );
+  fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
 }

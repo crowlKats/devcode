@@ -57,9 +57,12 @@ fn main() -> Result<(), anyhow::Error> {
         if input.state == ElementState::Pressed {
           ren
             .code_view
-            .input(ren.size, input.virtual_keycode.unwrap());
+            .input_special(ren.size, input.virtual_keycode.unwrap());
           ren.window.request_redraw();
         }
+      }
+      WindowEvent::ReceivedCharacter(ch) => {
+        ren.code_view.input_char(ren.size, ch);
       }
       _ => {}
     },

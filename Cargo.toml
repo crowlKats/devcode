@@ -12,3 +12,4 @@ anyhow = "1.0.38"
 futures = "0.3.13"
 shellexpand = "2.1.0"
 bytemuck = { version = "1.5.1", features = [ "derive" ] }
+unicode-segmentation = "1.7.1"

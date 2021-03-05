@@ -119,6 +119,7 @@ impl Rectangle {
     position: PhysicalPosition<f32>,
     size: PhysicalSize<u32>,
     color: [f32; 3],
+    region: Option<Region>,
   ) -> Self {
     let (pos, end_pos) = Self::calc_size(screen_size, position, size);
     let vertices = Self::create_vertices(pos, end_pos, color);
@@ -134,7 +135,7 @@ impl Rectangle {
       vertex_buffer,
       vertices,
       color,
-      region: None,
+      region,
       size,
       position,
     }

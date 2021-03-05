@@ -139,9 +139,10 @@ impl CodeView {
         height: screen_size.height,
       },
       [0.05, 0.05, 0.05],
+      None,
     );
 
-    let mut cursor = Rectangle::new(
+    let cursor = Rectangle::new(
       device,
       screen_size,
       PhysicalPosition {
@@ -153,13 +154,13 @@ impl CodeView {
         height: font_height as u32,
       },
       [0.7, 0.0, 0.0],
+      Some(Region {
+        x: line_numbers_width as u32 + 20,
+        y: 0,
+        width: screen_size.width - (line_numbers_width as u32 + 20),
+        height: screen_size.height,
+      }),
     );
-    cursor.region = Some(Region {
-      x: line_numbers_width as u32 + 20,
-      y: 0,
-      width: screen_size.width - (line_numbers_width as u32 + 20),
-      height: screen_size.height,
-    });
 
     let max_line_length =
       Self::max_line_length(&split_text, font.clone(), font_height);
@@ -181,22 +182,11 @@ impl CodeView {
     }
   }
 
-  pub fn input(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    let mut handle_left = || {
-      if self.cursor.column != 0 {
-        self.cursor.column -= 1;
-        self.cursor.x_offset = self
-          .cursor_x_position(self.cursor.row, self.cursor.column)
-          .unwrap();
-      } else if self.cursor.row != 0 {
-        self.cursor.row -= 1;
-        self.cursor.column = self.text[self.cursor.row].len();
-        self.cursor.x_offset = self
-          .cursor_x_position(self.cursor.row, self.cursor.column)
-          .unwrap_or(0.0);
-      }
-    };
-
+  pub fn input_special(
+    &mut self,
+    size: PhysicalSize<u32>,
+    key: VirtualKeyCode,
+  ) {
     match key {
       VirtualKeyCode::Up => {
         if self.cursor.row != 0 {
@@ -216,7 +206,20 @@ impl CodeView {
           self.cursor.column = 0;
         }
       }
-      VirtualKeyCode::Left => handle_left(),
+      VirtualKeyCode::Left => {
+        if self.cursor.column != 0 {
+          self.cursor.column -= 1;
+          self.cursor.x_offset = self
+            .cursor_x_position(self.cursor.row, self.cursor.column)
+            .unwrap();
+        } else if self.cursor.row != 0 {
+          self.cursor.row -= 1;
+          self.cursor.column = self.text[self.cursor.row].len();
+          self.cursor.x_offset = self
+            .cursor_x_position(self.cursor.row, self.cursor.column)
+            .unwrap_or(0.0);
+        }
+      }
       VirtualKeyCode::Down => {
         // TODO: handle last line
         if self.cursor.row != self.text.len() {
@@ -250,17 +253,7 @@ impl CodeView {
           self.cursor.row += 1;
         }
       }
-      VirtualKeyCode::Back => {
-        handle_left();
-
-        if self.cursor.column != 0 {
-          self.text[self.cursor.row].remove(self.cursor.column);
-        } else if self.cursor.row != 0 {
-          let removed = self.text.remove(self.cursor.row);
-          self.text[self.cursor.row - 1] += &removed;
-        }
-      }
-      _ => {}
+      _ => return,
     }
 
     self.cursor.rect.resize(
@@ -277,6 +270,41 @@ impl CodeView {
       },
       self.cursor.rect.size,
     );
+  }
+
+  pub fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
+    match ch {
+      '\u{7f}' => {
+        self.input_special(size, VirtualKeyCode::Left);
+        if self.cursor.column != 0 {
+          self.text[self.cursor.row].remove(self.cursor.column);
+        } else if self.cursor.row != 0 {
+          let removed = self.text.remove(self.cursor.row);
+          self.text[self.cursor.row - 1] += &removed;
+        }
+      }
+      '\r' => {
+        let after_enter =
+          self.text[self.cursor.row].split_off(self.cursor.column);
+        self.text.insert(self.cursor.row + 1, after_enter);
+        self.input_special(size, VirtualKeyCode::Right);
+      }
+      _ => {
+        println!(
+          "{} {} {} ({})",
+          self.text[self.cursor.row].len(),
+          self.cursor.column,
+          ch,
+          ch.escape_unicode(),
+        );
+        assert!(self.text[self.cursor.row].is_char_boundary(self.cursor.column));
+        println!("foo");
+        self.text[self.cursor.row].insert(self.cursor.column, ch);
+        self.input_special(size, VirtualKeyCode::Right);
+      }
+    }
+    self.max_line_length =
+      Self::max_line_length(&self.text, self.font.clone(), self.font_height);
   }
 }
 

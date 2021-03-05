@@ -71,24 +71,11 @@ impl Renderer {
 
     let font_size = font.glyph_bounds(&font.glyph_id('0').with_scale(scale));
 
-    let font_width_map = font
-      .codepoint_ids()
-      .map(|(glyph, c)| {
-        (c, font.glyph_bounds(&glyph.with_scale(scale)).width())
-      })
-      .collect();
-
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
-    let code_view = code_view::CodeView::new(
-      font,
-      text,
-      font_size.height(),
-      font_width_map,
-      &device,
-      size,
-    );
+    let code_view =
+      code_view::CodeView::new(font, text, font_size.height(), &device, size);
     let rectangle_render_pipeline = rectangle::Rectangle::pipeline(&device);
     Ok(Self {
       window,

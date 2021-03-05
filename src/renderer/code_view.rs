@@ -1,6 +1,5 @@
 use super::input::{max_line_length, Cursor};
 use super::rectangle::{Rectangle, Region};
-use std::collections::HashMap;
 use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{HorizontalAlign, Layout, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -34,7 +33,6 @@ impl CodeView {
     font: FontArc,
     text: String,
     font_height: f32,
-    font_width_map: HashMap<char, f32>,
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
   ) -> Self {
@@ -44,20 +42,13 @@ impl CodeView {
       split_text.push(String::from(""));
     }
 
-    // TODO: use Layout::calculate_glyphs
-    let line_numbers_width = {
-      let mut max_line_width = 0.0;
-      for (i, _) in split_text.iter().enumerate() {
-        let line_width = i
-          .to_string()
-          .chars()
-          .fold(0.0, |acc, c| acc + font_width_map.get(&c).unwrap());
-        if line_width > max_line_width {
-          max_line_width = line_width;
-        }
-      }
-      max_line_width
-    };
+    let line_numbers = split_text
+      .iter()
+      .enumerate()
+      .map(|(i, _)| i.to_string())
+      .collect::<Vec<String>>();
+    let line_numbers_width =
+      max_line_length(&line_numbers, font.clone(), font_height);
 
     let rect = Rectangle::new(
       device,

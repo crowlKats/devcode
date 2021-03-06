@@ -274,7 +274,20 @@ pub fn input_char(
   offset: PhysicalPosition<f32>,
   scroll_offset: PhysicalPosition<f32>,
 ) -> f32 {
-  // TODO: deduplicate long input_special calls
+  let input_spc =
+    |key: VirtualKeyCode, text: &mut Vec<String>, cursor: &mut Cursor| {
+      input_special(
+        size,
+        key,
+        text,
+        cursor,
+        font.clone(),
+        font_height,
+        offset,
+        scroll_offset,
+      );
+    };
+
   match ch {
     // backspace
     '\u{7f}' => {
@@ -282,45 +295,17 @@ pub fn input_char(
         let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
         let index = graphemes_indices.nth(cursor.column - 1).unwrap().0;
         text[cursor.row].remove(index);
-        input_special(
-          size,
-          VirtualKeyCode::Left,
-          text,
-          cursor,
-          font.clone(),
-          font_height,
-          offset,
-          scroll_offset,
-        );
+        input_spc(VirtualKeyCode::Left, text, cursor);
       } else if cursor.row != 0 {
         let removed = text.remove(cursor.row);
         let old = text[cursor.row - 1].clone();
-        let first_char = removed.chars().next();
 
-        if let Some(ch) = first_char {
+        if let Some(ch) = removed.chars().next() {
           text[cursor.row - 1] += &ch.to_string();
-          input_special(
-            size,
-            VirtualKeyCode::Left,
-            text,
-            cursor,
-            font.clone(),
-            font_height,
-            offset,
-            scroll_offset,
-          );
+          input_spc(VirtualKeyCode::Left, text, cursor);
         }
 
-        input_special(
-          size,
-          VirtualKeyCode::Left,
-          text,
-          cursor,
-          font.clone(),
-          font_height,
-          offset,
-          scroll_offset,
-        );
+        input_spc(VirtualKeyCode::Left, text, cursor);
 
         text[cursor.row] = old + &removed;
       }
@@ -331,31 +316,13 @@ pub fn input_char(
       let index = graphemes_indices.nth(cursor.column).unwrap().0;
       let after_enter = text[cursor.row].split_off(index);
       text.insert(cursor.row + 1, after_enter);
-      input_special(
-        size,
-        VirtualKeyCode::Right,
-        text,
-        cursor,
-        font.clone(),
-        font_height,
-        offset,
-        scroll_offset,
-      );
+      input_spc(VirtualKeyCode::Right, text, cursor);
     }
     _ => {
       let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
       let index = graphemes_indices.nth(cursor.column).unwrap().0;
       text[cursor.row].insert(index, ch);
-      input_special(
-        size,
-        VirtualKeyCode::Right,
-        text,
-        cursor,
-        font.clone(),
-        font_height,
-        offset,
-        scroll_offset,
-      );
+      input_spc(VirtualKeyCode::Right, text, cursor);
     }
   }
 

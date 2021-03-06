@@ -293,8 +293,23 @@ pub fn input_char(
           scroll_offset,
         );
       } else if cursor.row != 0 {
-        // TODO: fix cursor position
         let removed = text.remove(cursor.row);
+        let old = text[cursor.row - 1].clone();
+        let first_char = removed.chars().nth(0);
+
+        if let Some(ch) = first_char {
+          text[cursor.row - 1] += &ch.to_string();
+          input_special(
+            size,
+            VirtualKeyCode::Left,
+            text,
+            cursor,
+            font.clone(),
+            font_height,
+            offset,
+            scroll_offset,
+          );
+        }
 
         input_special(
           size,
@@ -307,7 +322,7 @@ pub fn input_char(
           scroll_offset,
         );
 
-        text[cursor.row] += &removed;
+        text[cursor.row] = old + &removed;
       }
     }
     // enter

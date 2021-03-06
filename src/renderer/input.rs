@@ -295,7 +295,7 @@ pub fn input_char(
       } else if cursor.row != 0 {
         let removed = text.remove(cursor.row);
         let old = text[cursor.row - 1].clone();
-        let first_char = removed.chars().nth(0);
+        let first_char = removed.chars().next();
 
         if let Some(ch) = first_char {
           text[cursor.row - 1] += &ch.to_string();

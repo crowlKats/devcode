@@ -320,14 +320,20 @@ pub fn input_char(
     // enter
     '\r' => {
       let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
-      let index = graphemes_indices.nth(cursor.column).unwrap().0;
+      let index = graphemes_indices
+        .nth(cursor.column)
+        .map(|(i, _)| i)
+        .unwrap_or(text[cursor.row].len());
       let after_enter = text[cursor.row].split_off(index);
       text.insert(cursor.row + 1, after_enter);
       input_spc(VirtualKeyCode::Right, text, cursor);
     }
     _ => {
       let mut graphemes_indices = text[cursor.row].grapheme_indices(true);
-      let index = graphemes_indices.nth(cursor.column).unwrap().0;
+      let index = graphemes_indices
+        .nth(cursor.column)
+        .map(|(i, _)| i)
+        .unwrap_or(text[cursor.row].len());
       text[cursor.row].insert(index, ch);
       input_spc(VirtualKeyCode::Right, text, cursor);
     }

@@ -221,8 +221,7 @@ pub fn input_special(
       }
     }
     VirtualKeyCode::Down => {
-      // TODO: handle last line
-      if cursor.row != text.len() {
+      if cursor.row != (text.len() - 1) {
         cursor.row += 1;
         if let Some(offset) = cursor_x_position2(cursor.row, cursor.column) {
           cursor.x_offset = offset;
@@ -234,17 +233,25 @@ pub fn input_special(
       } else {
         cursor.column = text[cursor.row].len();
         cursor.x_offset =
-          cursor_x_position2(cursor.row, cursor.column).unwrap();
+          cursor_x_position2(cursor.row, cursor.column).unwrap_or(0.0);
       }
     }
     VirtualKeyCode::Right => {
-      cursor.column += 1;
-      if let Some(offset) = cursor_x_position2(cursor.row, cursor.column) {
+      if cursor.row != (text.len() - 1) {
+        if let Some(offset) = cursor_x_position2(cursor.row, cursor.column + 1)
+        {
+          cursor.column += 1;
+          cursor.x_offset = offset;
+        } else {
+          cursor.x_offset = 0.0;
+          cursor.column = 0;
+          cursor.row += 1;
+        }
+      } else if let Some(offset) =
+        cursor_x_position2(cursor.row, cursor.column + 1)
+      {
+        cursor.column += 1;
         cursor.x_offset = offset;
-      } else {
-        cursor.x_offset = 0.0;
-        cursor.column = 0;
-        cursor.row += 1;
       }
     }
     _ => return,

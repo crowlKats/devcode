@@ -305,16 +305,10 @@ pub fn input_char(
         input_spc(VirtualKeyCode::Left, text, cursor);
       } else if cursor.row != 0 {
         let removed = text.remove(cursor.row);
-        let old = text[cursor.row - 1].clone();
-
-        if let Some(ch) = removed.chars().next() {
-          text[cursor.row - 1] += &ch.to_string();
-          input_spc(VirtualKeyCode::Left, text, cursor);
-        }
-
+        cursor.row -= 1;
+        cursor.column = text[cursor.row].len() + 1;
+        text[cursor.row] += &removed;
         input_spc(VirtualKeyCode::Left, text, cursor);
-
-        text[cursor.row] = old + &removed;
       }
     }
     // enter
@@ -323,7 +317,7 @@ pub fn input_char(
       let index = graphemes_indices
         .nth(cursor.column)
         .map(|(i, _)| i)
-        .unwrap_or(text[cursor.row].len());
+        .unwrap_or_else(|| text[cursor.row].len());
       let after_enter = text[cursor.row].split_off(index);
       text.insert(cursor.row + 1, after_enter);
       input_spc(VirtualKeyCode::Right, text, cursor);
@@ -333,7 +327,7 @@ pub fn input_char(
       let index = graphemes_indices
         .nth(cursor.column)
         .map(|(i, _)| i)
-        .unwrap_or(text[cursor.row].len());
+        .unwrap_or_else(|| text[cursor.row].len());
       text[cursor.row].insert(index, ch);
       input_spc(VirtualKeyCode::Right, text, cursor);
     }

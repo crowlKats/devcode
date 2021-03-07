@@ -5,6 +5,7 @@ mod renderer;
 use renderer::input::TextInput;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
 
 fn main() -> Result<(), anyhow::Error> {
@@ -30,6 +31,8 @@ fn main() -> Result<(), anyhow::Error> {
   })?;
 
   ren.window.request_redraw();
+
+  let mut mouse_pos = PhysicalPosition::new(0.0f64, 0.0f64);
 
   event_loop.run(move |event, _, control_flow| match event {
     winit::event::Event::WindowEvent { event, .. } => match event {
@@ -65,6 +68,8 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::ReceivedCharacter(ch) => {
         ren.code_view.input_char(ren.size, ch);
       }
+      WindowEvent::CursorMoved { position, .. } => mouse_pos = position,
+      WindowEvent::MouseInput { state, .. } => ren.click(mouse_pos, state),
       _ => {}
     },
     winit::event::Event::RedrawRequested(_) => ren.redraw().unwrap(),

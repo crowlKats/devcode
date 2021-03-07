@@ -365,6 +365,10 @@ impl TextInput for TextArea {
 }
 
 impl super::RenderElement for TextArea {
+  fn get_rects(&self) -> Vec<&Rectangle> {
+    vec![&self.cursor.rect]
+  }
+
   fn resize(&mut self, _size: PhysicalSize<u32>) {
     unimplemented!() // TODO
   }
@@ -389,7 +393,7 @@ impl super::RenderElement for TextArea {
     unimplemented!() // TODO
   }
 
-  fn get_rects(&self) -> Vec<&Rectangle> {
-    vec![&self.cursor.rect]
+  fn click(&mut self, _position: PhysicalPosition<f64>) {
+    unimplemented!() // TODO
   }
 }

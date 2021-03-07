@@ -1,17 +1,19 @@
 mod code_view;
+mod fs_tree;
 pub mod input;
 mod rectangle;
 
 use futures::task::SpawnExt;
 use wgpu_glyph::ab_glyph::Font;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::event::ElementState;
 
 const RENDER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
 pub struct Renderer {
   pub window: winit::window::Window,
-  surface: wgpu::Surface,
   pub size: PhysicalSize<u32>,
+  surface: wgpu::Surface,
   device: wgpu::Device,
   queue: wgpu::Queue,
   swap_chain: wgpu::SwapChain,
@@ -19,8 +21,9 @@ pub struct Renderer {
   local_spawner: futures::executor::LocalSpawner,
   local_pool: futures::executor::LocalPool,
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
-  pub code_view: code_view::CodeView,
   rectangle_render_pipeline: wgpu::RenderPipeline,
+  fs_tree: fs_tree::FsTree,
+  pub code_view: code_view::CodeView,
 }
 
 impl Renderer {
@@ -64,18 +67,43 @@ impl Renderer {
       },
     );
 
-    let px_per_em = (13.0 / 72.0) * (96.0 * window.scale_factor() as f32);
+    let px_per_em = (10.0 / 72.0) * (96.0 * window.scale_factor() as f32);
     let units_per_em = font.units_per_em().unwrap();
     let height = font.height_unscaled();
     let scale = (px_per_em / units_per_em) * height;
 
-    let font_size = font.glyph_bounds(&font.glyph_id('0').with_scale(scale));
+    let font_height = font
+      .glyph_bounds(&font.glyph_id('0').with_scale(scale))
+      .height();
 
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
-    let code_view =
-      code_view::CodeView::new(font, text, font_size.height(), &device, size);
+    let path = std::path::Path::new("./").canonicalize().unwrap();
+    let fs_tree = fs_tree::FsTree::new(
+      &device,
+      size,
+      font_height,
+      PhysicalPosition { x: 0, y: 0 },
+      PhysicalSize {
+        width: 400,
+        height: size.height,
+      },
+      path,
+    );
+
+    let code_view = code_view::CodeView::new(
+      &device,
+      size,
+      font,
+      font_height,
+      PhysicalPosition { x: 400, y: 0 },
+      PhysicalSize {
+        width: size.width - 400,
+        height: size.height,
+      },
+      text,
+    );
     let rectangle_render_pipeline = rectangle::Rectangle::pipeline(&device);
     Ok(Self {
       window,
@@ -88,6 +116,7 @@ impl Renderer {
       local_spawner,
       local_pool,
       glyph_brush,
+      fs_tree,
       code_view,
       rectangle_render_pipeline,
     })
@@ -107,6 +136,7 @@ impl Renderer {
       },
     );
 
+    self.fs_tree.resize(size);
     self.code_view.resize(size);
 
     self.scroll(PhysicalPosition { x: 0.0, y: 0.0 });
@@ -146,7 +176,7 @@ impl Renderer {
       });
 
       rpass.set_pipeline(&self.rectangle_render_pipeline);
-      for rect in self.code_view.get_rects() {
+      for rect in self.get_rects() {
         rect.write_buffer(&self.queue);
         rpass.set_vertex_buffer(0, rect.vertex_buffer.slice(..));
         if let Some(ref region) = rect.region {
@@ -172,6 +202,15 @@ impl Renderer {
       self.size,
     );
 
+    self.fs_tree.redraw(
+      &mut self.glyph_brush,
+      &self.device,
+      &mut self.staging_belt,
+      &mut encoder,
+      &frame.view,
+      self.size,
+    );
+
     self.staging_belt.finish();
     self.queue.submit(Some(encoder.finish()));
     self.local_spawner.spawn(self.staging_belt.recall())?;
@@ -179,9 +218,57 @@ impl Renderer {
 
     Ok(())
   }
+
+  fn get_rects(&self) -> Vec<&rectangle::Rectangle> {
+    let mut vec = vec![];
+    vec.extend(self.code_view.get_rects());
+    vec.extend(self.fs_tree.get_rects());
+    vec
+  }
+
+  pub fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    state: ElementState,
+  ) {
+    if state == ElementState::Pressed {
+      if let Some(pos) = position_in_obj(
+        position.cast(),
+        self.fs_tree.position,
+        self.fs_tree.size,
+      ) {
+        self.fs_tree.click(pos.cast());
+        self.window.request_redraw();
+      }
+    }
+  }
+}
+
+fn position_in_obj(
+  mouse_position: PhysicalPosition<u32>,
+  obj_position: PhysicalPosition<u32>,
+  obj_size: PhysicalSize<u32>,
+) -> Option<PhysicalPosition<u32>> {
+  if mouse_position.x >= obj_position.x && mouse_position.y >= obj_position.y {
+    let end_pos = PhysicalPosition {
+      x: obj_position.x + obj_size.width,
+      y: obj_position.y + obj_size.height,
+    };
+    if mouse_position.x <= end_pos.x && mouse_position.x <= end_pos.x {
+      Some(PhysicalPosition {
+        x: mouse_position.x - obj_position.x,
+        y: mouse_position.y - obj_position.y,
+      })
+    } else {
+      None
+    }
+  } else {
+    None
+  }
 }
 
 trait RenderElement {
+  fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
   fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>);
   fn scroll(
     &mut self,
@@ -197,5 +284,5 @@ trait RenderElement {
     target: &wgpu::TextureView,
     size: PhysicalSize<u32>,
   );
-  fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
+  fn click(&mut self, position: winit::dpi::PhysicalPosition<f64>);
 }

@@ -7,13 +7,16 @@ use winit::event::VirtualKeyCode;
 
 pub struct CodeView {
   font: FontArc,
+  font_height: f32,
   text: Vec<String>,
   scroll_offset: winit::dpi::PhysicalPosition<f64>,
-  font_height: f32,
   rect: Rectangle,
   cursor: Cursor,
   line_numbers_width: f32,
+  line_numbers_width_padded: f32,
   max_line_length: f32,
+  pub position: PhysicalPosition<u32>,
+  pub size: PhysicalSize<u32>,
 }
 
 impl CodeView {
@@ -30,11 +33,13 @@ impl CodeView {
   }
 
   pub fn new(
-    font: FontArc,
-    text: String,
-    font_height: f32,
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
+    font: FontArc,
+    font_height: f32,
+    position: PhysicalPosition<u32>,
+    size: PhysicalSize<u32>,
+    text: String,
   ) -> Self {
     let mut split_text =
       text.lines().map(|s| s.to_string()).collect::<Vec<String>>();
@@ -50,12 +55,14 @@ impl CodeView {
     let line_numbers_width =
       max_line_length(&line_numbers, font.clone(), font_height);
 
+    let line_numbers_width_padded = line_numbers_width + 20.0;
+
     let rect = Rectangle::new(
       device,
       screen_size,
       PhysicalPosition { x: 0.0, y: 0.0 },
       PhysicalSize {
-        width: line_numbers_width as u32 + 10,
+        width: position.x + (line_numbers_width_padded as u32 - 10),
         height: screen_size.height,
       },
       [0.05, 0.05, 0.05],
@@ -66,7 +73,7 @@ impl CodeView {
       device,
       screen_size,
       PhysicalPosition {
-        x: line_numbers_width + 20.0,
+        x: position.x as f32 + line_numbers_width_padded,
         y: screen_size.height as f32 - font_height,
       },
       PhysicalSize {
@@ -75,9 +82,9 @@ impl CodeView {
       },
       [0.7, 0.0, 0.0],
       Some(Region {
-        x: line_numbers_width as u32 + 20,
+        x: line_numbers_width_padded as u32,
         y: 0,
-        width: screen_size.width - (line_numbers_width as u32 + 20),
+        width: screen_size.width - (line_numbers_width_padded as u32),
         height: screen_size.height,
       }),
     );
@@ -87,13 +94,16 @@ impl CodeView {
 
     Self {
       font,
+      font_height,
       text: split_text,
       scroll_offset: winit::dpi::PhysicalPosition { x: 0.0, y: 0.0 },
-      font_height,
       rect,
       cursor,
       line_numbers_width,
+      line_numbers_width_padded,
       max_line_length,
+      position,
+      size,
     }
   }
 }
@@ -108,7 +118,7 @@ impl super::input::TextInput for CodeView {
       self.font.clone(),
       self.font_height,
       PhysicalPosition {
-        x: self.line_numbers_width + 20.0,
+        x: self.position.x as f32 + self.line_numbers_width_padded,
         y: 0.0,
       },
       self.scroll_offset.cast(),
@@ -124,7 +134,7 @@ impl super::input::TextInput for CodeView {
       self.font.clone(),
       self.font_height,
       PhysicalPosition {
-        x: self.line_numbers_width + 20.0,
+        x: self.position.x as f32 + self.line_numbers_width_padded,
         y: 0.0,
       },
       self.scroll_offset.cast(),
@@ -136,9 +146,12 @@ impl super::RenderElement for CodeView {
   fn resize(&mut self, screen_size: PhysicalSize<u32>) {
     self.rect.resize(
       screen_size,
-      PhysicalPosition { x: 0.0, y: 0.0 },
+      PhysicalPosition {
+        x: self.position.x as f32,
+        y: 0.0,
+      },
       PhysicalSize {
-        width: self.line_numbers_width as u32 + 10,
+        width: self.line_numbers_width_padded as u32 - 10,
         height: screen_size.height,
       },
     );
@@ -155,9 +168,10 @@ impl super::RenderElement for CodeView {
     );
 
     self.cursor.rect.region = Some(Region {
-      x: self.line_numbers_width as u32 + 20,
+      x: self.position.x + self.line_numbers_width_padded as u32,
       y: 0,
-      width: screen_size.width - (self.line_numbers_width as u32 + 20),
+      width: screen_size.width
+        - (self.position.x + self.line_numbers_width_padded as u32),
       height: screen_size.height,
     });
   }
@@ -165,9 +179,9 @@ impl super::RenderElement for CodeView {
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
     self.scroll_offset.x = (self.scroll_offset.x - offset.x)
       .max(
-        (size.width as f64 - (self.line_numbers_width as f64 + 20.0))
+        (size.width as f64 - self.line_numbers_width_padded as f64)
           - self.max_line_length as f64,
-      )
+      ) // TODO
       .min(0.0);
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
@@ -176,9 +190,9 @@ impl super::RenderElement for CodeView {
     self.cursor.rect.resize(
       size,
       PhysicalPosition {
-        x: self.scroll_offset.x as f32
-          + self.line_numbers_width
-          + 20.0
+        x: self.position.x as f32
+          + self.scroll_offset.x as f32
+          + self.line_numbers_width_padded
           + self.cursor.x_offset,
         y: size.height as f32
           - self.font_height
@@ -206,7 +220,10 @@ impl super::RenderElement for CodeView {
     }
 
     glyph_brush.queue(Section {
-      screen_position: (self.line_numbers_width, self.scroll_offset.y as f32),
+      screen_position: (
+        self.position.x as f32 + self.line_numbers_width,
+        self.scroll_offset.y as f32,
+      ),
       text: vec![Text::new(&line_numbers)
         .with_color([0.9, 0.9, 0.9, 1.0])
         .with_scale(self.font_height)],
@@ -225,7 +242,8 @@ impl super::RenderElement for CodeView {
       )
       .unwrap();
 
-    let codeview_offset = self.line_numbers_width + 20.0;
+    let codeview_offset =
+      self.position.x as f32 + self.line_numbers_width_padded;
     glyph_brush.queue(Section {
       screen_position: (
         codeview_offset + self.scroll_offset.x as f32,
@@ -262,5 +280,9 @@ impl super::RenderElement for CodeView {
 
   fn get_rects(&self) -> Vec<&Rectangle> {
     vec![&self.cursor.rect, &self.rect]
+  }
+
+  fn click(&mut self, _position: PhysicalPosition<f64>) {
+    unimplemented!() // TODO
   }
 }

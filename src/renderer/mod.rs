@@ -254,7 +254,7 @@ fn position_in_obj(
       x: obj_position.x + obj_size.width,
       y: obj_position.y + obj_size.height,
     };
-    if mouse_position.x <= end_pos.x && mouse_position.x <= end_pos.x {
+    if mouse_position.x <= end_pos.x && mouse_position.y <= end_pos.y {
       Some(PhysicalPosition {
         x: mouse_position.x - obj_position.x,
         y: mouse_position.y - obj_position.y,

@@ -10,6 +10,7 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 struct TreeEntry {
   name: String,
+  #[allow(dead_code)]
   path: PathBuf,
   inset: usize,
   sub_entry: Option<Vec<TreeEntry>>,
@@ -214,10 +215,8 @@ impl super::RenderElement for FsTree {
     let index = (position.y / self.font_height as f64).floor() as usize;
     let mut i = 0;
     self.tree.walk(&mut |entry| {
-      if index == i {
-        if entry.sub_entry.is_some() {
-          entry.folded = !entry.folded;
-        }
+      if index == i && entry.sub_entry.is_some() {
+        entry.folded = !entry.folded;
       }
       i += 1;
       !entry.folded

@@ -24,10 +24,15 @@ impl CodeView {
     self
       .text
       .iter()
-      .map(|s| {
-        Text::new(s)
-          .with_color([0.9, 0.9, 0.9, 1.0])
-          .with_scale(self.font_height)
+      .flat_map(|s| {
+        std::iter::once(
+          Text::new(s)
+            .with_color([0.9, 0.9, 0.9, 1.0])
+            .with_scale(self.font_height),
+        )
+        .chain(std::iter::once(
+          Text::new("\n").with_scale(self.font_height),
+        ))
       })
       .collect()
   }
@@ -174,6 +179,8 @@ impl super::RenderElement for CodeView {
         - (self.position.x + self.line_numbers_width_padded as u32),
       height: screen_size.height,
     });
+
+    self.size = screen_size;
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
@@ -253,15 +260,7 @@ impl super::RenderElement for CodeView {
         codeview_offset + self.scroll_offset.x as f32,
         self.scroll_offset.y as f32,
       ),
-      text: self
-        .generate_glyph_text()
-        .iter()
-        .flat_map(|s| {
-          std::iter::once(*s).chain(std::iter::once(
-            Text::new("\n").with_scale(self.font_height),
-          ))
-        })
-        .collect(),
+      text: self.generate_glyph_text(),
       ..Section::default()
     });
 

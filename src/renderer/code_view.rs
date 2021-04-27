@@ -283,6 +283,10 @@ impl super::RenderElement for CodeView {
   }
 
   fn click(&mut self, _position: PhysicalPosition<f64>) {
-    unimplemented!() // TODO
+    todo!()
+  }
+
+  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
+    (self.position, self.size)
   }
 }

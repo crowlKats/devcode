@@ -241,4 +241,8 @@ impl super::RenderElement for FsTree {
       !entry.folded
     });
   }
+
+  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
+    (self.position, self.size)
+  }
 }

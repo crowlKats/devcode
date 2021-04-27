@@ -370,7 +370,7 @@ impl super::RenderElement for TextArea {
   }
 
   fn resize(&mut self, _size: PhysicalSize<u32>) {
-    unimplemented!() // TODO
+    todo!()
   }
 
   fn scroll(
@@ -378,7 +378,7 @@ impl super::RenderElement for TextArea {
     _offset: PhysicalPosition<f64>,
     _size: PhysicalSize<u32>,
   ) {
-    unimplemented!() // TODO
+    todo!()
   }
 
   fn redraw(
@@ -390,10 +390,14 @@ impl super::RenderElement for TextArea {
     _target: &TextureView,
     _size: PhysicalSize<u32>,
   ) {
-    unimplemented!() // TODO
+    todo!()
   }
 
   fn click(&mut self, _position: PhysicalPosition<f64>) {
-    unimplemented!() // TODO
+    todo!()
+  }
+
+  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
+    todo!()
   }
 }

@@ -136,15 +136,10 @@ impl Renderer {
       },
     );
 
-    self.fs_tree.resize(size);
-    self.code_view.resize(size);
-
-    self
-      .fs_tree
-      .scroll(PhysicalPosition { x: 0.0, y: 0.0 }, self.size);
-    self
-      .code_view
-      .scroll(PhysicalPosition { x: 0.0, y: 0.0 }, self.size);
+    for element in self.get_elements() {
+      element.resize(size);
+      element.scroll(PhysicalPosition { x: 0.0, y: 0.0 }, size);
+    }
   }
 
   pub fn scroll(
@@ -152,22 +147,14 @@ impl Renderer {
     offset: PhysicalPosition<f64>,
     mouse_pos: PhysicalPosition<f64>,
   ) {
-    if position_in_obj(
-      mouse_pos.cast(),
-      self.fs_tree.position,
-      self.fs_tree.size,
-    )
-    .is_some()
-    {
-      self.fs_tree.scroll(offset, self.size);
-    } else if position_in_obj(
-      mouse_pos.cast(),
-      self.code_view.position,
-      self.code_view.size,
-    )
-    .is_some()
-    {
-      self.code_view.scroll(offset, self.size);
+    let self_size = self.size;
+    for element in self.get_elements() {
+      let (pos, size) = element.get_pos_size();
+
+      if position_in_obj(mouse_pos.cast(), pos, size).is_some() {
+        element.scroll(offset, self_size);
+        break;
+      }
     }
   }
 
@@ -244,6 +231,24 @@ impl Renderer {
     Ok(())
   }
 
+  pub fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    state: ElementState,
+  ) {
+    if state == ElementState::Pressed {
+      for element in self.get_elements() {
+        let (pos, size) = element.get_pos_size();
+
+        if let Some(pos) = position_in_obj(position.cast(), pos, size) {
+          element.click(pos.cast());
+          self.window.request_redraw();
+          break;
+        }
+      }
+    }
+  }
+
   fn get_rects(&self) -> Vec<&rectangle::Rectangle> {
     let mut vec = vec![];
     vec.extend(self.code_view.get_rects());
@@ -251,21 +256,8 @@ impl Renderer {
     vec
   }
 
-  pub fn click(
-    &mut self,
-    position: PhysicalPosition<f64>,
-    state: ElementState,
-  ) {
-    if state == ElementState::Pressed {
-      if let Some(pos) = position_in_obj(
-        position.cast(),
-        self.fs_tree.position,
-        self.fs_tree.size,
-      ) {
-        self.fs_tree.click(pos.cast());
-        self.window.request_redraw();
-      }
-    }
+  fn get_elements(&mut self) -> Vec<&mut dyn RenderElement> {
+    vec![&mut self.code_view, &mut self.fs_tree]
   }
 }
 
@@ -310,4 +302,5 @@ trait RenderElement {
     size: PhysicalSize<u32>,
   );
   fn click(&mut self, position: winit::dpi::PhysicalPosition<f64>);
+  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>);
 }

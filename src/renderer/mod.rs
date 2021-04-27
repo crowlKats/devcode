@@ -144,6 +144,7 @@ impl Renderer {
 
   pub fn scroll(&mut self, offset: PhysicalPosition<f64>) {
     self.code_view.scroll(offset, self.size);
+    self.fs_tree.scroll(offset, self.size);
   }
 
   pub fn redraw(&mut self) -> Result<(), anyhow::Error> {

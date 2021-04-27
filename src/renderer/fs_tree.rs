@@ -84,19 +84,29 @@ impl TreeEntry {
     }
   }
 
-  fn walk<F>(&mut self, cb: &mut F)
+  fn walk<F>(&mut self, cb: &mut F) -> i32
   where
     F: FnMut(&mut Self) -> bool,
   {
-    let con = cb(self);
+    fn walk_inner<F>(fs_tree: &mut TreeEntry, cb: &mut F, counter: &mut i32)
+    where
+      F: FnMut(&mut TreeEntry) -> bool,
+    {
+      *counter += 1;
+      let depth_continue = cb(fs_tree);
 
-    if let Some(tree) = self.sub_entry.as_mut() {
-      if con {
-        for entry in tree.iter_mut() {
-          entry.walk(cb);
+      if let Some(tree) = fs_tree.sub_entry.as_mut() {
+        if depth_continue {
+          for entry in tree.iter_mut() {
+            *counter += entry.walk(cb);
+          }
         }
       }
     }
+
+    let mut counter = 0;
+    walk_inner(self, cb, &mut counter);
+    counter
   }
 }
 
@@ -105,7 +115,9 @@ pub struct FsTree {
   font_height: f32,
   pub position: PhysicalPosition<u32>,
   pub size: PhysicalSize<u32>,
+  scroll_offset: PhysicalPosition<f64>,
   tree: TreeEntry,
+  counter: i32,
 }
 
 impl FsTree {
@@ -134,7 +146,9 @@ impl FsTree {
       font_height,
       position,
       size,
+      scroll_offset: PhysicalPosition { x: 0.0, y: 0.0 },
       tree: TreeEntry::new(path, ignore_set),
+      counter: 0,
     }
   }
 }
@@ -158,9 +172,12 @@ impl super::RenderElement for FsTree {
 
   fn scroll(
     &mut self,
-    _offset: PhysicalPosition<f64>,
+    offset: PhysicalPosition<f64>,
     _size: PhysicalSize<u32>,
   ) {
+    self.scroll_offset.y = (self.scroll_offset.y + offset.y)
+      .min(0.0)
+      .max(-((self.counter - 3) as f32 * self.font_height) as f64);
   }
 
   fn redraw(
@@ -173,12 +190,13 @@ impl super::RenderElement for FsTree {
     screen_size: PhysicalSize<u32>,
   ) {
     let font_height = self.font_height;
+    let y_offset = self.scroll_offset.y;
     let mut index = 0;
-    self.tree.walk(&mut |entry| {
+    self.counter = self.tree.walk(&mut |entry| {
       glyph_brush.queue(Section {
         screen_position: (
           entry.inset as f32 * font_height,
-          index as f32 * font_height,
+          (index as f32 * font_height) + y_offset as f32,
         ),
         bounds: (f32::INFINITY, f32::INFINITY),
         layout: Default::default(),
@@ -212,9 +230,10 @@ impl super::RenderElement for FsTree {
   }
 
   fn click(&mut self, position: PhysicalPosition<f64>) {
-    let index = (position.y / self.font_height as f64).floor() as usize;
+    let index = ((position.y - self.scroll_offset.y) / self.font_height as f64)
+      .floor() as usize;
     let mut i = 0;
-    self.tree.walk(&mut |entry| {
+    self.counter = self.tree.walk(&mut |entry| {
       if index == i && entry.sub_entry.is_some() {
         entry.folded = !entry.folded;
       }

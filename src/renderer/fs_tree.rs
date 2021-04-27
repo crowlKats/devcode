@@ -154,10 +154,6 @@ impl FsTree {
 }
 
 impl super::RenderElement for FsTree {
-  fn get_rects(&self) -> Vec<&Rectangle> {
-    vec![&self.rect]
-  }
-
   fn resize(&mut self, screen_size: PhysicalSize<u32>) {
     self.rect.resize(
       screen_size,
@@ -178,6 +174,19 @@ impl super::RenderElement for FsTree {
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
       .max(-((self.counter - 3) as f32 * self.font_height) as f64);
+  }
+
+  fn click(&mut self, position: PhysicalPosition<f64>) {
+    let index = ((position.y - self.scroll_offset.y) / self.font_height as f64)
+      .floor() as usize;
+    let mut i = 0;
+    self.counter = self.tree.walk(&mut |entry| {
+      if index == i && entry.sub_entry.is_some() {
+        entry.folded = !entry.folded;
+      }
+      i += 1;
+      !entry.folded
+    });
   }
 
   fn redraw(
@@ -229,17 +238,8 @@ impl super::RenderElement for FsTree {
       .unwrap();
   }
 
-  fn click(&mut self, position: PhysicalPosition<f64>) {
-    let index = ((position.y - self.scroll_offset.y) / self.font_height as f64)
-      .floor() as usize;
-    let mut i = 0;
-    self.counter = self.tree.walk(&mut |entry| {
-      if index == i && entry.sub_entry.is_some() {
-        entry.folded = !entry.folded;
-      }
-      i += 1;
-      !entry.folded
-    });
+  fn get_rects(&self) -> Vec<&Rectangle> {
+    vec![&self.rect]
   }
 
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {

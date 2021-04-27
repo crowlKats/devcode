@@ -104,6 +104,44 @@ impl TextArea {
   }
 }
 
+impl super::RenderElement for TextArea {
+  fn resize(&mut self, _size: PhysicalSize<u32>) {
+    todo!()
+  }
+
+  fn scroll(
+    &mut self,
+    _offset: PhysicalPosition<f64>,
+    _size: PhysicalSize<u32>,
+  ) {
+    todo!()
+  }
+
+  fn click(&mut self, _position: PhysicalPosition<f64>) {
+    todo!()
+  }
+
+  fn redraw(
+    &mut self,
+    _glyph_brush: &mut GlyphBrush<()>,
+    _device: &Device,
+    _staging_belt: &mut StagingBelt,
+    _encoder: &mut CommandEncoder,
+    _target: &TextureView,
+    _size: PhysicalSize<u32>,
+  ) {
+    todo!()
+  }
+
+  fn get_rects(&self) -> Vec<&Rectangle> {
+    vec![&self.cursor.rect]
+  }
+
+  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
+    todo!()
+  }
+}
+
 pub fn max_line_length(
   lines: &[String],
   font: FontArc,
@@ -361,43 +399,5 @@ impl TextInput for TextArea {
       PhysicalPosition { x: 0.0, y: 0.0 },
       PhysicalPosition { x: 0.0, y: 0.0 },
     );
-  }
-}
-
-impl super::RenderElement for TextArea {
-  fn get_rects(&self) -> Vec<&Rectangle> {
-    vec![&self.cursor.rect]
-  }
-
-  fn resize(&mut self, _size: PhysicalSize<u32>) {
-    todo!()
-  }
-
-  fn scroll(
-    &mut self,
-    _offset: PhysicalPosition<f64>,
-    _size: PhysicalSize<u32>,
-  ) {
-    todo!()
-  }
-
-  fn redraw(
-    &mut self,
-    _glyph_brush: &mut GlyphBrush<()>,
-    _device: &Device,
-    _staging_belt: &mut StagingBelt,
-    _encoder: &mut CommandEncoder,
-    _target: &TextureView,
-    _size: PhysicalSize<u32>,
-  ) {
-    todo!()
-  }
-
-  fn click(&mut self, _position: PhysicalPosition<f64>) {
-    todo!()
-  }
-
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
-    todo!()
   }
 }

@@ -203,6 +203,10 @@ impl super::RenderElement for CodeView {
     );
   }
 
+  fn click(&mut self, _position: PhysicalPosition<f64>) {
+    todo!()
+  }
+
   fn redraw(
     &mut self,
     glyph_brush: &mut wgpu_glyph::GlyphBrush<()>,
@@ -280,10 +284,6 @@ impl super::RenderElement for CodeView {
 
   fn get_rects(&self) -> Vec<&Rectangle> {
     vec![&self.cursor.rect, &self.rect]
-  }
-
-  fn click(&mut self, _position: PhysicalPosition<f64>) {
-    todo!()
   }
 
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {

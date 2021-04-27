@@ -158,6 +158,24 @@ impl Renderer {
     }
   }
 
+  pub fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    state: ElementState,
+  ) {
+    if state == ElementState::Pressed {
+      for element in self.get_elements() {
+        let (pos, size) = element.get_pos_size();
+
+        if let Some(pos) = position_in_obj(position.cast(), pos, size) {
+          element.click(pos.cast());
+          self.window.request_redraw();
+          break;
+        }
+      }
+    }
+  }
+
   pub fn redraw(&mut self) -> Result<(), anyhow::Error> {
     let mut encoder =
       self
@@ -231,24 +249,6 @@ impl Renderer {
     Ok(())
   }
 
-  pub fn click(
-    &mut self,
-    position: PhysicalPosition<f64>,
-    state: ElementState,
-  ) {
-    if state == ElementState::Pressed {
-      for element in self.get_elements() {
-        let (pos, size) = element.get_pos_size();
-
-        if let Some(pos) = position_in_obj(position.cast(), pos, size) {
-          element.click(pos.cast());
-          self.window.request_redraw();
-          break;
-        }
-      }
-    }
-  }
-
   fn get_rects(&self) -> Vec<&rectangle::Rectangle> {
     let mut vec = vec![];
     vec.extend(self.code_view.get_rects());
@@ -285,13 +285,13 @@ fn position_in_obj(
 }
 
 trait RenderElement {
-  fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
   fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>);
   fn scroll(
     &mut self,
     offset: winit::dpi::PhysicalPosition<f64>,
     size: winit::dpi::PhysicalSize<u32>,
   );
+  fn click(&mut self, position: winit::dpi::PhysicalPosition<f64>);
   fn redraw(
     &mut self,
     glyph_brush: &mut wgpu_glyph::GlyphBrush<()>,
@@ -301,6 +301,6 @@ trait RenderElement {
     target: &wgpu::TextureView,
     size: PhysicalSize<u32>,
   );
-  fn click(&mut self, position: winit::dpi::PhysicalPosition<f64>);
+  fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>);
 }

@@ -1,7 +1,7 @@
 use crate::renderer::rectangle::Rectangle;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
@@ -19,7 +19,7 @@ struct TreeEntry {
 
 impl TreeEntry {
   fn gen(
-    path: &PathBuf,
+    path: &Path,
     inset: usize,
     ignore_set: &HashSet<OsString>,
   ) -> Vec<Self> {
@@ -98,7 +98,7 @@ impl TreeEntry {
       if let Some(tree) = fs_tree.sub_entry.as_mut() {
         if depth_continue {
           for entry in tree.iter_mut() {
-            *counter += entry.walk(cb);
+            walk_inner(entry, cb, counter);
           }
         }
       }

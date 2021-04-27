@@ -139,12 +139,36 @@ impl Renderer {
     self.fs_tree.resize(size);
     self.code_view.resize(size);
 
-    self.scroll(PhysicalPosition { x: 0.0, y: 0.0 });
+    self
+      .fs_tree
+      .scroll(PhysicalPosition { x: 0.0, y: 0.0 }, self.size);
+    self
+      .code_view
+      .scroll(PhysicalPosition { x: 0.0, y: 0.0 }, self.size);
   }
 
-  pub fn scroll(&mut self, offset: PhysicalPosition<f64>) {
-    self.code_view.scroll(offset, self.size);
-    self.fs_tree.scroll(offset, self.size);
+  pub fn scroll(
+    &mut self,
+    offset: PhysicalPosition<f64>,
+    mouse_pos: PhysicalPosition<f64>,
+  ) {
+    if position_in_obj(
+      mouse_pos.cast(),
+      self.fs_tree.position,
+      self.fs_tree.size,
+    )
+    .is_some()
+    {
+      self.fs_tree.scroll(offset, self.size);
+    } else if position_in_obj(
+      mouse_pos.cast(),
+      self.code_view.position,
+      self.code_view.size,
+    )
+    .is_some()
+    {
+      self.code_view.scroll(offset, self.size);
+    }
   }
 
   pub fn redraw(&mut self) -> Result<(), anyhow::Error> {

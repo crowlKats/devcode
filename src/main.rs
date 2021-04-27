@@ -46,13 +46,16 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::MouseWheel { delta, .. } => {
         match delta {
           MouseScrollDelta::LineDelta(x, y) => {
-            ren.scroll(winit::dpi::PhysicalPosition {
-              x: x as f64,
-              y: y as f64,
-            });
+            ren.scroll(
+              winit::dpi::PhysicalPosition {
+                x: x as f64,
+                y: y as f64,
+              },
+              mouse_pos,
+            );
           }
           MouseScrollDelta::PixelDelta(delta) => {
-            ren.scroll(delta);
+            ren.scroll(delta, mouse_pos);
           }
         }
         ren.window.request_redraw();

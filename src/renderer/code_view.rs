@@ -20,9 +20,8 @@ pub struct CodeView {
 }
 
 impl CodeView {
-  fn generate_glyph_text(&self) -> Vec<Text> {
-    self
-      .text
+  fn generate_glyph_text(&self, range: std::ops::Range<usize>) -> Vec<Text> {
+    self.text[range]
       .iter()
       .flat_map(|s| {
         std::iter::once(
@@ -223,17 +222,25 @@ impl super::RenderElement for CodeView {
     target: &wgpu::TextureView,
     size: PhysicalSize<u32>,
   ) {
-    let mut line_count = 0;
+    let upper_bound =
+      ((-self.scroll_offset.y) / self.font_height as f64).floor() as usize;
+    let lower_bound = (upper_bound
+      + ((self.size.height as f64) as f32 / self.font_height).ceil() as usize)
+      .min(self.text.len());
+
+    let mut line_count = upper_bound;
     let mut line_numbers = String::new();
-    for _ in &self.text {
+    for _ in &self.text[upper_bound..lower_bound] {
       line_count += 1;
       line_numbers += &format!("{}\n", line_count);
     }
 
+    let y_scroll = -((-self.scroll_offset.y as f32) % self.font_height);
+
     glyph_brush.queue(Section {
       screen_position: (
         self.position.x as f32 + self.line_numbers_width,
-        self.scroll_offset.y as f32,
+        y_scroll,
       ),
       text: vec![Text::new(&line_numbers)
         .with_color([0.9, 0.9, 0.9, 1.0])
@@ -258,9 +265,9 @@ impl super::RenderElement for CodeView {
     glyph_brush.queue(Section {
       screen_position: (
         codeview_offset + self.scroll_offset.x as f32,
-        self.scroll_offset.y as f32,
+        y_scroll,
       ),
-      text: self.generate_glyph_text(),
+      text: self.generate_glyph_text(upper_bound..lower_bound),
       ..Section::default()
     });
 

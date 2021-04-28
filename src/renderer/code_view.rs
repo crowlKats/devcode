@@ -183,15 +183,18 @@ impl super::RenderElement for CodeView {
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
-    self.scroll_offset.x = (self.scroll_offset.x - offset.x)
-      .max(
-        (size.width as f64 - self.line_numbers_width_padded as f64)
-          - self.max_line_length as f64,
-      ) // TODO
-      .min(0.0);
-    self.scroll_offset.y = (self.scroll_offset.y + offset.y)
-      .min(0.0)
-      .max(-((self.text.len() - 3) as f32 * self.font_height) as f64);
+    if offset.x.abs() > offset.y.abs() {
+      self.scroll_offset.x = (self.scroll_offset.x - offset.x)
+        .max(
+          (size.width as f64 - self.line_numbers_width_padded as f64)
+            - self.max_line_length as f64,
+        ) // TODO
+        .min(0.0);
+    } else {
+      self.scroll_offset.y = (self.scroll_offset.y + offset.y)
+        .min(0.0)
+        .max(-((self.text.len() - 3) as f32 * self.font_height) as f64);
+    }
 
     self.cursor.rect.resize(
       size,

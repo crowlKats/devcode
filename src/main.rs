@@ -72,7 +72,10 @@ fn main() -> Result<(), anyhow::Error> {
         ren.code_view.input_char(ren.size, ch);
       }
       WindowEvent::CursorMoved { position, .. } => mouse_pos = position,
-      WindowEvent::MouseInput { state, .. } => ren.click(mouse_pos, state),
+      WindowEvent::MouseInput { state, .. } => {
+        ren.click(mouse_pos, state);
+        ren.window.request_redraw();
+      }
       _ => {}
     },
     winit::event::Event::RedrawRequested(_) => ren.redraw().unwrap(),

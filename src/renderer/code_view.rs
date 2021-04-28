@@ -1,7 +1,9 @@
 use super::input::{max_line_length, Cursor};
 use super::rectangle::{Rectangle, Region};
 use wgpu_glyph::ab_glyph::FontArc;
-use wgpu_glyph::{HorizontalAlign, Layout, Section, Text};
+use wgpu_glyph::{
+  GlyphPositioner, HorizontalAlign, Layout, Section, SectionGeometry, Text,
+};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
@@ -212,8 +214,34 @@ impl super::RenderElement for CodeView {
     );
   }
 
-  fn click(&mut self, _position: PhysicalPosition<f64>) {
-    todo!()
+  fn click(&mut self, position: PhysicalPosition<f64>) {
+    let line = ((position.y - self.scroll_offset.y) / self.font_height as f64)
+      .floor() as usize;
+    let text = self.generate_glyph_text(line..line + 1)[0];
+    let layout = Layout::default_wrap();
+
+    let section_glyphs = &layout.calculate_glyphs(
+      &[self.font.clone()],
+      &SectionGeometry {
+        ..Default::default()
+      },
+      &[text],
+    );
+
+    let mut c = 0;
+    for section_glyph in section_glyphs {
+      c += 1;
+      self.cursor.x_offset = section_glyph.glyph.position.x;
+      if (position.x as f32 - self.line_numbers_width_padded)
+        < section_glyph.glyph.position.x
+      {
+        c -= 1;
+        break;
+      }
+    }
+
+    self.cursor.row = line;
+    self.cursor.column = c;
   }
 
   fn redraw(

@@ -142,6 +142,34 @@ impl super::RenderElement for TextArea {
   }
 }
 
+impl TextInput for TextArea {
+  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
+    input_special(
+      size,
+      key,
+      &mut self.text,
+      &mut self.cursor,
+      self.font.clone(),
+      self.font_height,
+      PhysicalPosition { x: 0.0, y: 0.0 },
+      PhysicalPosition { x: 0.0, y: 0.0 },
+    );
+  }
+
+  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
+    self.max_line_length = input_char(
+      size,
+      ch,
+      &mut self.text,
+      &mut self.cursor,
+      self.font.clone(),
+      self.font_height,
+      PhysicalPosition { x: 0.0, y: 0.0 },
+      PhysicalPosition { x: 0.0, y: 0.0 },
+    );
+  }
+}
+
 pub fn max_line_length(
   lines: &[String],
   font: FontArc,
@@ -172,7 +200,7 @@ pub fn max_line_length(
   max_line_width
 }
 
-fn cursor_x_position(
+pub fn cursor_x_position(
   row: usize,
   column: usize,
   text: &[String],
@@ -372,32 +400,4 @@ pub fn input_char(
   }
 
   max_line_length(&text, font, font_height)
-}
-
-impl TextInput for TextArea {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    input_special(
-      size,
-      key,
-      &mut self.text,
-      &mut self.cursor,
-      self.font.clone(),
-      self.font_height,
-      PhysicalPosition { x: 0.0, y: 0.0 },
-      PhysicalPosition { x: 0.0, y: 0.0 },
-    );
-  }
-
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
-    self.max_line_length = input_char(
-      size,
-      ch,
-      &mut self.text,
-      &mut self.cursor,
-      self.font.clone(),
-      self.font_height,
-      PhysicalPosition { x: 0.0, y: 0.0 },
-      PhysicalPosition { x: 0.0, y: 0.0 },
-    );
-  }
 }

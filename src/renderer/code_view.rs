@@ -83,7 +83,7 @@ impl CodeView {
         y: screen_size.height as f32 - font_height,
       },
       PhysicalSize {
-        width: 6,
+        width: 4,
         height: font_height as u32,
       },
       [0.7, 0.0, 0.0],

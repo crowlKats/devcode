@@ -261,7 +261,7 @@ impl Renderer {
   }
 }
 
-fn position_in_obj(
+pub fn position_in_obj(
   mouse_position: PhysicalPosition<u32>,
   obj_position: PhysicalPosition<u32>,
   obj_size: PhysicalSize<u32>,

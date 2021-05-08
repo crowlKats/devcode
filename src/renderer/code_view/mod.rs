@@ -1,11 +1,7 @@
-use crate::renderer::position_in_obj;
 use crate::renderer::rectangle::Rectangle;
 use std::cell::RefCell;
 use std::rc::Rc;
-use wgpu::util::StagingBelt;
-use wgpu::{CommandEncoder, Device, TextureView};
 use wgpu_glyph::ab_glyph::FontArc;
-use wgpu_glyph::GlyphBrush;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
@@ -82,55 +78,15 @@ impl super::input::TextInput for CodeView {
 }
 
 impl super::RenderElement for CodeView {
-  fn resize(&mut self, size: PhysicalSize<u32>) {
-    self.gutter.resize(size);
-    self.code.resize(size);
-  }
-
-  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
-    self.gutter.scroll(offset, size);
-    self.code.scroll(offset, size);
-  }
-
-  fn click(&mut self, position: PhysicalPosition<f64>) {
-    let (pos, size) = self.gutter.get_pos_size();
-    if let Some(pos) = position_in_obj(position.cast(), pos, size) {
-      self.gutter.click(pos.cast());
-    } else {
-      let (pos, size) = self.code.get_pos_size();
-      if let Some(pos) = position_in_obj(position.cast(), pos, size) {
-        self.code.click(pos.cast());
-      }
-    }
-  }
-
-  fn redraw(
-    &mut self,
-    glyph_brush: &mut GlyphBrush<()>,
-    device: &Device,
-    staging_belt: &mut StagingBelt,
-    encoder: &mut CommandEncoder,
-    target: &TextureView,
-    size: PhysicalSize<u32>,
-  ) {
-    self.gutter.redraw(
-      glyph_brush,
-      device,
-      staging_belt,
-      encoder,
-      target,
-      size,
-    );
-    self
-      .code
-      .redraw(glyph_brush, device, staging_belt, encoder, target, size);
-  }
-
   fn get_rects(&self) -> Vec<&Rectangle> {
     let mut vec = vec![];
     vec.extend(self.gutter.get_rects());
     vec.extend(self.code.get_rects());
     vec
+  }
+
+  fn get_elements(&mut self) -> Vec<&mut dyn super::RenderElement> {
+    vec![&mut self.gutter, &mut self.code]
   }
 
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {

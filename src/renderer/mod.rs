@@ -4,7 +4,10 @@ pub mod input;
 mod rectangle;
 
 use futures::task::SpawnExt;
+use wgpu::util::StagingBelt;
+use wgpu::{CommandEncoder, Device, TextureView};
 use wgpu_glyph::ab_glyph::Font;
+use wgpu_glyph::GlyphBrush;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::ElementState;
 
@@ -285,22 +288,43 @@ pub fn position_in_obj(
 }
 
 trait RenderElement {
-  fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>);
-  fn scroll(
-    &mut self,
-    offset: winit::dpi::PhysicalPosition<f64>,
-    size: winit::dpi::PhysicalSize<u32>,
-  );
-  fn click(&mut self, position: winit::dpi::PhysicalPosition<f64>);
+  fn resize(&mut self, size: PhysicalSize<u32>) {
+    for element in self.get_elements() {
+      element.resize(size);
+    }
+  }
+
+  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
+    for element in self.get_elements() {
+      element.scroll(offset, size);
+    }
+  }
+
+  fn click(&mut self, position: PhysicalPosition<f64>) {
+    for element in self.get_elements() {
+      let (pos, size) = element.get_pos_size();
+      if let Some(pos) = position_in_obj(position.cast(), pos, size) {
+        element.click(pos.cast());
+        break;
+      }
+    }
+  }
+
   fn redraw(
     &mut self,
-    glyph_brush: &mut wgpu_glyph::GlyphBrush<()>,
-    device: &wgpu::Device,
-    staging_belt: &mut wgpu::util::StagingBelt,
-    encoder: &mut wgpu::CommandEncoder,
-    target: &wgpu::TextureView,
+    glyph_brush: &mut GlyphBrush<()>,
+    device: &Device,
+    staging_belt: &mut StagingBelt,
+    encoder: &mut CommandEncoder,
+    target: &TextureView,
     size: PhysicalSize<u32>,
-  );
+  ) {
+    for element in self.get_elements() {
+      element.redraw(glyph_brush, device, staging_belt, encoder, target, size);
+    }
+  }
+
   fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
+  fn get_elements(&mut self) -> Vec<&mut dyn RenderElement>;
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>);
 }

@@ -87,10 +87,6 @@ impl super::super::RenderElement for Gutter {
       .max(-((self.text.borrow().len() - 3) as f32 * self.font_height) as f64);
   }
 
-  fn click(&mut self, _position: PhysicalPosition<f64>) {
-    todo!()
-  }
-
   fn redraw(
     &mut self,
     glyph_brush: &mut GlyphBrush<()>,
@@ -139,6 +135,10 @@ impl super::super::RenderElement for Gutter {
 
   fn get_rects(&self) -> Vec<&Rectangle> {
     vec![&self.rect]
+  }
+
+  fn get_elements(&mut self) -> Vec<&mut dyn super::super::RenderElement> {
+    vec![]
   }
 
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {

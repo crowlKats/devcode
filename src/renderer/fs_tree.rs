@@ -242,6 +242,10 @@ impl super::RenderElement for FsTree {
     vec![&self.rect]
   }
 
+  fn get_elements(&mut self) -> Vec<&mut dyn super::RenderElement> {
+    vec![]
+  }
+
   fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
     (self.position, self.size)
   }

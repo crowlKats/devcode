@@ -9,14 +9,14 @@ use wgpu_glyph::GlyphBrush;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
-mod code_view;
+mod code;
 mod gutter;
 
 pub struct CodeView {
   #[allow(dead_code)]
   text: Rc<RefCell<Vec<String>>>,
   gutter: gutter::Gutter,
-  code_view: code_view::CodeView,
+  code: code::Code,
   pub position: PhysicalPosition<u32>,
   pub size: PhysicalSize<u32>,
 }
@@ -48,10 +48,10 @@ impl CodeView {
       Rc::clone(&text),
     );
 
-    let code_view = code_view::CodeView::new(
+    let code = code::Code::new(
       device,
       screen_size,
-      font.clone(),
+      font,
       font_height,
       PhysicalPosition {
         x: position.x + gutter.size.width,
@@ -62,7 +62,7 @@ impl CodeView {
     );
 
     Self {
-      code_view,
+      code,
       gutter,
       text,
       position,
@@ -73,23 +73,23 @@ impl CodeView {
 
 impl super::input::TextInput for CodeView {
   fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    self.code_view.input_special(size, key);
+    self.code.input_special(size, key);
   }
 
   fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
-    self.code_view.input_char(size, ch);
+    self.code.input_char(size, ch);
   }
 }
 
 impl super::RenderElement for CodeView {
   fn resize(&mut self, size: PhysicalSize<u32>) {
     self.gutter.resize(size);
-    self.code_view.resize(size);
+    self.code.resize(size);
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
     self.gutter.scroll(offset, size);
-    self.code_view.scroll(offset, size);
+    self.code.scroll(offset, size);
   }
 
   fn click(&mut self, position: PhysicalPosition<f64>) {
@@ -97,9 +97,9 @@ impl super::RenderElement for CodeView {
     if let Some(pos) = position_in_obj(position.cast(), pos, size) {
       self.gutter.click(pos.cast());
     } else {
-      let (pos, size) = self.code_view.get_pos_size();
+      let (pos, size) = self.code.get_pos_size();
       if let Some(pos) = position_in_obj(position.cast(), pos, size) {
-        self.code_view.click(pos.cast());
+        self.code.click(pos.cast());
       }
     }
   }
@@ -121,20 +121,15 @@ impl super::RenderElement for CodeView {
       target,
       size,
     );
-    self.code_view.redraw(
-      glyph_brush,
-      device,
-      staging_belt,
-      encoder,
-      target,
-      size,
-    );
+    self
+      .code
+      .redraw(glyph_brush, device, staging_belt, encoder, target, size);
   }
 
   fn get_rects(&self) -> Vec<&Rectangle> {
     let mut vec = vec![];
     vec.extend(self.gutter.get_rects());
-    vec.extend(self.code_view.get_rects());
+    vec.extend(self.code.get_rects());
     vec
   }
 

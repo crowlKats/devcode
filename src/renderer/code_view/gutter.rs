@@ -32,8 +32,7 @@ impl Gutter {
       .enumerate()
       .map(|(i, _)| i.to_string())
       .collect::<Vec<String>>();
-    let line_numbers_width =
-      max_line_length(&line_numbers, font.clone(), font_height);
+    let line_numbers_width = max_line_length(&line_numbers, font, font_height);
 
     let rect = Rectangle::new(
       device,

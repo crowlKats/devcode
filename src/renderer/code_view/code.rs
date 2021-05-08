@@ -7,7 +7,7 @@ use wgpu_glyph::{GlyphPositioner, Layout, Section, SectionGeometry, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
-pub struct CodeView {
+pub struct Code {
   font: FontArc,
   font_height: f32,
   text: Rc<RefCell<Vec<String>>>,
@@ -18,7 +18,7 @@ pub struct CodeView {
   pub size: PhysicalSize<u32>,
 }
 
-impl CodeView {
+impl Code {
   fn generate_glyph_text<'r>(
     &self,
     text: &'r Ref<'_, [String]>,
@@ -83,7 +83,7 @@ impl CodeView {
   }
 }
 
-impl super::super::input::TextInput for CodeView {
+impl super::super::input::TextInput for Code {
   fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
     super::super::input::input_special(
       size,
@@ -117,7 +117,7 @@ impl super::super::input::TextInput for CodeView {
   }
 }
 
-impl super::super::RenderElement for CodeView {
+impl super::super::RenderElement for Code {
   fn resize(&mut self, screen_size: PhysicalSize<u32>) {
     self.cursor.rect.resize(
       screen_size,

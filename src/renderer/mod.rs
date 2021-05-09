@@ -1,9 +1,11 @@
 mod code_view;
+mod code_view_tabs;
 mod fs_tree;
 pub mod input;
 mod rectangle;
 
 use futures::task::SpawnExt;
+use std::path::PathBuf;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
 use wgpu_glyph::ab_glyph::Font;
@@ -26,14 +28,14 @@ pub struct Renderer {
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   rectangle_render_pipeline: wgpu::RenderPipeline,
   fs_tree: fs_tree::FsTree,
-  pub code_view: code_view::CodeView,
+  pub code_views: code_view_tabs::CodeViewTabs,
 }
 
 impl Renderer {
   pub async fn new(
     event_loop: &winit::event_loop::EventLoop<()>,
     font: wgpu_glyph::ab_glyph::FontArc,
-    text: String,
+    filepath: PathBuf,
   ) -> Result<Self, anyhow::Error> {
     let window = winit::window::WindowBuilder::new()
       .with_title(env!("CARGO_CRATE_NAME"))
@@ -82,7 +84,7 @@ impl Renderer {
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
-    let path = std::path::Path::new("./").canonicalize().unwrap();
+    let path = std::path::Path::new("./").canonicalize()?;
     let fs_tree = fs_tree::FsTree::new(
       &device,
       size,
@@ -96,7 +98,7 @@ impl Renderer {
       path,
     );
 
-    let code_view = code_view::CodeView::new(
+    let mut code_views = code_view_tabs::CodeViewTabs::new(
       &device,
       size,
       font,
@@ -107,8 +109,8 @@ impl Renderer {
         width: size.width as f32 - 400.0,
         height: size.height as f32,
       },
-      text,
     );
+    code_views.add(&device, size, filepath)?;
     let rectangle_render_pipeline = rectangle::Rectangle::pipeline(&device);
     Ok(Self {
       window,
@@ -122,7 +124,7 @@ impl Renderer {
       local_pool,
       glyph_brush,
       fs_tree,
-      code_view,
+      code_views,
       rectangle_render_pipeline,
     })
   }
@@ -228,7 +230,7 @@ impl Renderer {
       }
     }
 
-    self.code_view.redraw(
+    self.code_views.redraw(
       &mut self.glyph_brush,
       &self.device,
       &mut self.staging_belt,
@@ -256,20 +258,20 @@ impl Renderer {
 
   fn get_rects(&self) -> Vec<&rectangle::Rectangle> {
     let mut vec = vec![];
-    vec.extend(self.code_view.get_rects());
+    vec.extend(self.code_views.get_rects());
     vec.extend(self.fs_tree.get_rects());
     vec
   }
 
   fn get_elements(&mut self) -> Vec<&mut dyn RenderElement> {
-    vec![&mut self.code_view, &mut self.fs_tree]
+    vec![&mut self.code_views, &mut self.fs_tree]
   }
 }
 
 trait RenderElement {
-  fn resize(&mut self, size: PhysicalSize<f32>) {
+  fn resize(&mut self, screen_size: PhysicalSize<f32>) {
     for element in self.get_elements() {
-      element.resize(size);
+      element.resize(screen_size);
     }
   }
 

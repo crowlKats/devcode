@@ -65,13 +65,16 @@ impl Gutter {
 
 impl super::super::RenderElement for Gutter {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
+    self.dimensions.height = screen_size.height;
+    self.dimensions.width = screen_size.width;
+
     self.rect.resize(
       screen_size.cast(),
       Dimensions {
         x: self.dimensions.x,
-        y: 0.0,
+        y: self.dimensions.y,
         width: self.dimensions.width - GUTTER_MARGIN,
-        height: screen_size.height,
+        height: self.dimensions.height,
       },
     );
   }
@@ -112,7 +115,8 @@ impl super::super::RenderElement for Gutter {
       screen_position: (
         (self.dimensions.x
           + (self.dimensions.width - (GUTTER_PADDING + GUTTER_MARGIN))),
-        -((-self.scroll_offset_y as f32) % self.font_height),
+        -(((-self.scroll_offset_y as f32) % self.font_height)
+          - (size.height as f32 - self.dimensions.height)),
       ),
       text: vec![Text::new(&line_numbers)
         .with_color([0.9, 0.9, 0.9, 1.0])
@@ -122,13 +126,18 @@ impl super::super::RenderElement for Gutter {
     });
 
     glyph_brush
-      .draw_queued(
+      .draw_queued_with_transform_and_scissoring(
         device,
         staging_belt,
         encoder,
         target,
-        size.width,
-        size.height,
+        wgpu_glyph::orthographic_projection(size.width, size.height),
+        wgpu_glyph::Region {
+          x: self.dimensions.x as u32,
+          y: size.height - self.dimensions.height as u32,
+          width: self.dimensions.width as u32,
+          height: self.dimensions.height as u32,
+        },
       )
       .unwrap();
   }

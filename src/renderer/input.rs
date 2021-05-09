@@ -140,30 +140,36 @@ impl TextInput for TextArea {
   }
 }
 
+pub fn line_length(line: &str, font: FontArc, font_height: f32) -> f32 {
+  let layout = Layout::default_wrap();
+  let text = Text::new(line).with_scale(font_height);
+  let section_glyphs = layout.calculate_glyphs(
+    &[font.clone()],
+    &SectionGeometry {
+      ..Default::default()
+    },
+    &[text],
+  );
+
+  if let Some(section_glyph) = section_glyphs.last() {
+    section_glyph.glyph.position.x
+      + font.glyph_bounds(&section_glyph.glyph).width()
+  } else {
+    0.0
+  }
+}
+
 pub fn max_line_length(
   lines: &[String],
   font: FontArc,
   font_height: f32,
 ) -> f32 {
   let mut max_line_width = 0.0;
-  let layout = Layout::default_wrap();
   for line in lines {
-    let text = Text::new(line).with_scale(font_height);
-    let section_glyphs = layout.calculate_glyphs(
-      &[font.clone()],
-      &SectionGeometry {
-        ..Default::default()
-      },
-      &[text],
-    );
+    let width = line_length(line, font.clone(), font_height);
 
-    if let Some(section_glyph) = section_glyphs.last() {
-      let width = section_glyph.glyph.position.x
-        + font.glyph_bounds(&section_glyph.glyph).width();
-
-      if width > max_line_width {
-        max_line_width = width;
-      }
+    if width > max_line_width {
+      max_line_width = width;
     }
   }
 

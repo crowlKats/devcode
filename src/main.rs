@@ -2,7 +2,7 @@
 
 mod renderer;
 
-use renderer::input::TextInput;
+use crate::renderer::input::TextInput;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use winit::dpi::PhysicalPosition;
@@ -21,13 +21,12 @@ fn main() -> Result<(), anyhow::Error> {
   if !filepath.is_file() {
     anyhow::bail!("path isn't a file");
   }
-  let text = std::fs::read_to_string(filepath)?;
 
   let font = get_font(args.get(2))?;
 
   let event_loop = winit::event_loop::EventLoop::new();
   let mut ren = futures::executor::block_on(async {
-    renderer::Renderer::new(&event_loop, font, text).await
+    renderer::Renderer::new(&event_loop, font, filepath).await
   })?;
 
   ren.window.request_redraw();
@@ -63,13 +62,13 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::KeyboardInput { input, .. } => {
         if input.state == ElementState::Pressed {
           ren
-            .code_view
+            .code_views
             .input_special(ren.size, input.virtual_keycode.unwrap());
           ren.window.request_redraw();
         }
       }
       WindowEvent::ReceivedCharacter(ch) => {
-        ren.code_view.input_char(ren.size, ch);
+        ren.code_views.input_char(ren.size, ch);
       }
       WindowEvent::CursorMoved { position, .. } => mouse_pos = position,
       WindowEvent::MouseInput { state, .. } => {

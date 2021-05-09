@@ -57,10 +57,10 @@ impl Code {
       },
       [0.7, 0.0, 0.0],
       Some(Region {
-        x: 0,
-        y: 0,
-        width: screen_size.width,
-        height: screen_size.height,
+        x: dimensions.x as u32,
+        y: screen_size.height - dimensions.height as u32,
+        width: dimensions.width as u32,
+        height: dimensions.height as u32,
       }),
     );
 
@@ -115,6 +115,9 @@ impl super::super::input::TextInput for Code {
 
 impl super::super::RenderElement for Code {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
+    self.dimensions.width = screen_size.width;
+    self.dimensions.height = screen_size.height;
+
     self.cursor.rect.resize(
       screen_size.cast(),
       Dimensions {
@@ -127,13 +130,10 @@ impl super::super::RenderElement for Code {
 
     self.cursor.rect.region = Some(Region {
       x: self.dimensions.x as u32,
-      y: 0,
-      width: (screen_size.width - self.dimensions.x) as u32,
-      height: screen_size.height as u32,
+      y: (screen_size.height - self.dimensions.height) as u32,
+      width: self.dimensions.width as u32,
+      height: self.dimensions.height as u32,
     });
-
-    self.dimensions.width = screen_size.width;
-    self.dimensions.height = screen_size.height;
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
@@ -153,7 +153,7 @@ impl super::super::RenderElement for Code {
         x: self.dimensions.x
           + self.scroll_offset.x as f32
           + self.cursor.x_offset,
-        y: size.height as f32
+        y: self.dimensions.height
           - self.font_height
           - self.scroll_offset.y as f32
           - (self.cursor.row as f32 * self.font_height),
@@ -211,7 +211,8 @@ impl super::super::RenderElement for Code {
     glyph_brush.queue(Section {
       screen_position: (
         self.dimensions.x + self.scroll_offset.x as f32,
-        -((-self.scroll_offset.y as f32) % self.font_height),
+        -(((-self.scroll_offset.y as f32) % self.font_height)
+          - (size.height as f32 - self.dimensions.height)),
       ),
       text: self.generate_glyph_text(&vec),
       ..Section::default()
@@ -226,9 +227,9 @@ impl super::super::RenderElement for Code {
         wgpu_glyph::orthographic_projection(size.width, size.height),
         wgpu_glyph::Region {
           x: self.dimensions.x as u32,
-          y: 0,
-          width: size.width - self.dimensions.x as u32,
-          height: size.height,
+          y: size.height - self.dimensions.height as u32,
+          width: self.dimensions.width as u32,
+          height: self.dimensions.height as u32,
         },
       )
       .unwrap();

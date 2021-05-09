@@ -264,7 +264,9 @@ impl Renderer {
   }
 
   fn get_elements(&mut self) -> Vec<&mut dyn RenderElement> {
-    vec![&mut self.code_views, &mut self.fs_tree]
+    let mut vec: Vec<&mut dyn RenderElement> = vec![&mut self.fs_tree];
+    vec.extend(self.code_views.get_elements());
+    vec
   }
 }
 

@@ -115,8 +115,7 @@ impl super::super::input::TextInput for Code {
 
 impl super::super::RenderElement for Code {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
-    self.dimensions.width = screen_size.width;
-    self.dimensions.height = screen_size.height;
+    self.dimensions.width = screen_size.width - self.dimensions.x;
 
     self.cursor.rect.resize(
       screen_size.cast(),

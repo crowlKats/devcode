@@ -43,10 +43,8 @@ impl Gutter {
       device,
       screen_size,
       Dimensions {
-        x: 0.0,
-        y: 0.0,
-        width: dimensions.x + rect_size,
-        height: dimensions.height,
+        width: rect_size,
+        ..dimensions
       },
       [0.5, 0.05, 0.05],
       None,

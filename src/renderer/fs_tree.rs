@@ -128,13 +128,8 @@ impl FsTree {
     dimensions: Dimensions,
     path: PathBuf,
   ) -> Self {
-    let rect = Rectangle::new(
-      device,
-      screen_size,
-      Default::default(),
-      [0.04, 0.04, 0.04],
-      None,
-    );
+    let rect =
+      Rectangle::new(device, screen_size, dimensions, [0.04, 0.04, 0.04], None);
 
     let mut ignore_set = HashSet::new();
     ignore_set.insert(OsString::from_str(".DS_Store").unwrap());
@@ -152,16 +147,8 @@ impl FsTree {
 
 impl super::RenderElement for FsTree {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
-    self.rect.resize(
-      screen_size.cast(),
-      Dimensions {
-        x: 0.0,
-        y: 0.0,
-        width: self.dimensions.width,
-        height: screen_size.height,
-      },
-    );
     self.dimensions.height = screen_size.height;
+    self.rect.resize(screen_size.cast(), self.dimensions);
   }
 
   fn scroll(

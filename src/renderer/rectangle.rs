@@ -1,3 +1,4 @@
+use crate::renderer::Dimensions;
 use bytemuck::{Pod, Zeroable};
 use std::borrow::Cow;
 use wgpu::util::DeviceExt;
@@ -24,8 +25,7 @@ pub struct Rectangle {
   vertices: [Vertex; 4],
   color: [f32; 3],
   pub region: Option<Region>,
-  pub size: PhysicalSize<u32>,
-  pub position: PhysicalPosition<f32>,
+  pub dimensions: Dimensions,
 }
 
 impl Rectangle {
@@ -98,17 +98,16 @@ impl Rectangle {
 
   fn calc_size(
     screen_size: PhysicalSize<u32>,
-    position: PhysicalPosition<f32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
   ) -> (PhysicalPosition<f32>, PhysicalPosition<f32>) {
     (
       PhysicalPosition {
-        x: ((position.x / (screen_size.width as f32)) * 2.0) - 1.0,
-        y: ((position.y / (screen_size.height as f32)) * 2.0) - 1.0,
+        x: ((dimensions.x / screen_size.width as f32) * 2.0) - 1.0,
+        y: ((dimensions.y / screen_size.height as f32) * 2.0) - 1.0,
       },
       PhysicalPosition {
-        x: ((size.width as f32) / (screen_size.width as f32)) * 2.0,
-        y: ((size.height as f32) / (screen_size.height as f32)) * 2.0,
+        x: (dimensions.width / screen_size.width as f32) * 2.0,
+        y: (dimensions.height / screen_size.height as f32) * 2.0,
       },
     )
   }
@@ -116,12 +115,11 @@ impl Rectangle {
   pub fn new(
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
-    position: PhysicalPosition<f32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
     color: [f32; 3],
     region: Option<Region>,
   ) -> Self {
-    let (pos, end_pos) = Self::calc_size(screen_size, position, size);
+    let (pos, end_pos) = Self::calc_size(screen_size, dimensions);
     let vertices = Self::create_vertices(pos, end_pos, color);
 
     let vertex_buffer =
@@ -136,20 +134,17 @@ impl Rectangle {
       vertices,
       color,
       region,
-      size,
-      position,
+      dimensions,
     }
   }
 
   pub fn resize(
     &mut self,
     screen_size: PhysicalSize<u32>,
-    position: PhysicalPosition<f32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
   ) {
-    self.position = position;
-    self.size = size;
-    let (pos, end_pos) = Self::calc_size(screen_size, position, size);
+    self.dimensions = dimensions;
+    let (pos, end_pos) = Self::calc_size(screen_size, dimensions);
     self.vertices = Self::create_vertices(pos, end_pos, self.color);
   }
 

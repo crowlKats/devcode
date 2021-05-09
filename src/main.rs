@@ -37,7 +37,7 @@ fn main() -> Result<(), anyhow::Error> {
   event_loop.run(move |event, _, control_flow| match event {
     winit::event::Event::WindowEvent { event, .. } => match event {
       WindowEvent::Resized(size) => {
-        ren.resize(size);
+        ren.resize(size.cast());
         ren.window.request_redraw();
       }
       WindowEvent::CloseRequested => {

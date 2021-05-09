@@ -1,5 +1,6 @@
 use crate::renderer::input::max_line_length;
 use crate::renderer::rectangle::Rectangle;
+use crate::renderer::Dimensions;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wgpu::util::StagingBelt;
@@ -8,14 +9,13 @@ use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{GlyphBrush, HorizontalAlign, Layout, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-const GUTTER_MARGIN: u32 = 10;
-const GUTTER_PADDING: u32 = 10;
+const GUTTER_MARGIN: f32 = 10.0;
+const GUTTER_PADDING: f32 = 10.0;
 
 pub struct Gutter {
   text: Rc<RefCell<Vec<String>>>,
   rect: Rectangle,
-  position: PhysicalPosition<u32>,
-  pub size: PhysicalSize<u32>,
+  pub dimensions: Dimensions,
   scroll_offset_y: f64,
   font_height: f32,
 }
@@ -25,8 +25,8 @@ impl Gutter {
     device: &wgpu::Device,
     font: FontArc,
     font_height: f32,
-    position: PhysicalPosition<u32>,
-    size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<u32>,
+    dimensions: Dimensions,
     text: Rc<RefCell<Vec<String>>>,
   ) -> Self {
     let line_numbers = text
@@ -37,29 +37,27 @@ impl Gutter {
       .collect::<Vec<String>>();
     let line_numbers_width = max_line_length(&line_numbers, font, font_height);
 
-    let rect_size = line_numbers_width as u32 + GUTTER_PADDING;
+    let rect_size = line_numbers_width + GUTTER_PADDING;
 
     let rect = Rectangle::new(
       device,
-      size,
-      PhysicalPosition { x: 0.0, y: 0.0 },
-      PhysicalSize {
-        width: position.x + rect_size,
-        height: size.height,
+      screen_size,
+      Dimensions {
+        x: 0.0,
+        y: 0.0,
+        width: dimensions.x + rect_size,
+        height: dimensions.height,
       },
       [0.5, 0.05, 0.05],
       None,
     );
 
-    let size = PhysicalSize {
-      width: rect_size + GUTTER_MARGIN,
-      height: size.height,
-    };
-
     Self {
       text,
-      position,
-      size,
+      dimensions: Dimensions {
+        width: rect_size + GUTTER_MARGIN,
+        ..dimensions
+      },
       rect,
       font_height,
       scroll_offset_y: 0.0,
@@ -68,15 +66,13 @@ impl Gutter {
 }
 
 impl super::super::RenderElement for Gutter {
-  fn resize(&mut self, screen_size: PhysicalSize<u32>) {
+  fn resize(&mut self, screen_size: PhysicalSize<f32>) {
     self.rect.resize(
-      screen_size,
-      PhysicalPosition {
-        x: self.position.x as f32,
+      screen_size.cast(),
+      Dimensions {
+        x: self.dimensions.x,
         y: 0.0,
-      },
-      PhysicalSize {
-        width: self.size.width - GUTTER_MARGIN,
+        width: self.dimensions.width - GUTTER_MARGIN,
         height: screen_size.height,
       },
     );
@@ -85,7 +81,7 @@ impl super::super::RenderElement for Gutter {
   fn scroll(
     &mut self,
     offset: PhysicalPosition<f64>,
-    _size: PhysicalSize<u32>,
+    _size: PhysicalSize<f32>,
   ) {
     self.scroll_offset_y = (self.scroll_offset_y + offset.y)
       .min(0.0)
@@ -104,7 +100,7 @@ impl super::super::RenderElement for Gutter {
     let upper_bound =
       ((-self.scroll_offset_y) / self.font_height as f64).floor() as usize;
     let lower_bound = (upper_bound
-      + ((self.size.height as f64) as f32 / self.font_height).ceil() as usize)
+      + (self.dimensions.height / self.font_height).ceil() as usize)
       .min(self.text.borrow().len());
 
     let mut line_count = upper_bound;
@@ -116,8 +112,8 @@ impl super::super::RenderElement for Gutter {
 
     glyph_brush.queue(Section {
       screen_position: (
-        (self.position.x + (self.size.width - (GUTTER_PADDING + GUTTER_MARGIN)))
-          as f32,
+        (self.dimensions.x
+          + (self.dimensions.width - (GUTTER_PADDING + GUTTER_MARGIN))),
         -((-self.scroll_offset_y as f32) % self.font_height),
       ),
       text: vec![Text::new(&line_numbers)
@@ -147,7 +143,7 @@ impl super::super::RenderElement for Gutter {
     vec![]
   }
 
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
-    (self.position, self.size)
+  fn get_dimensions(&self) -> Dimensions {
+    self.dimensions
   }
 }

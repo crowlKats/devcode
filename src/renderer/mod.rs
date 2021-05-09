@@ -87,10 +87,11 @@ impl Renderer {
       &device,
       size,
       font_height,
-      PhysicalPosition { x: 0, y: 0 },
-      PhysicalSize {
-        width: 400,
-        height: size.height,
+      Dimensions {
+        x: 0.0,
+        y: 0.0,
+        width: 400.0,
+        height: size.height as f32,
       },
       path,
     );
@@ -100,10 +101,11 @@ impl Renderer {
       size,
       font,
       font_height,
-      PhysicalPosition { x: 400, y: 0 },
-      PhysicalSize {
-        width: size.width - 400,
-        height: size.height,
+      Dimensions {
+        x: 400.0,
+        y: 0.0,
+        width: size.width as f32 - 400.0,
+        height: size.height as f32,
       },
       text,
     );
@@ -125,8 +127,8 @@ impl Renderer {
     })
   }
 
-  pub fn resize(&mut self, size: PhysicalSize<u32>) {
-    self.size = size;
+  pub fn resize(&mut self, size: PhysicalSize<f32>) {
+    self.size = size.cast();
 
     self.swap_chain = self.device.create_swap_chain(
       &self.surface,
@@ -150,11 +152,13 @@ impl Renderer {
     offset: PhysicalPosition<f64>,
     mouse_pos: PhysicalPosition<f64>,
   ) {
-    let self_size = self.size;
+    let self_size = self.size.cast();
     for element in self.get_elements() {
-      let (pos, size) = element.get_pos_size();
-
-      if position_in_obj(mouse_pos.cast(), pos, size).is_some() {
+      if element
+        .get_dimensions()
+        .contains(mouse_pos.cast())
+        .is_some()
+      {
         element.scroll(offset, self_size);
         break;
       }
@@ -168,9 +172,7 @@ impl Renderer {
   ) {
     if state == ElementState::Pressed {
       for element in self.get_elements() {
-        let (pos, size) = element.get_pos_size();
-
-        if let Some(pos) = position_in_obj(position.cast(), pos, size) {
+        if let Some(pos) = element.get_dimensions().contains(position.cast()) {
           element.click(pos.cast());
           self.window.request_redraw();
           break;
@@ -264,37 +266,14 @@ impl Renderer {
   }
 }
 
-pub fn position_in_obj(
-  mouse_position: PhysicalPosition<u32>,
-  obj_position: PhysicalPosition<u32>,
-  obj_size: PhysicalSize<u32>,
-) -> Option<PhysicalPosition<u32>> {
-  if mouse_position.x >= obj_position.x && mouse_position.y >= obj_position.y {
-    let end_pos = PhysicalPosition {
-      x: obj_position.x + obj_size.width,
-      y: obj_position.y + obj_size.height,
-    };
-    if mouse_position.x <= end_pos.x && mouse_position.y <= end_pos.y {
-      Some(PhysicalPosition {
-        x: mouse_position.x - obj_position.x,
-        y: mouse_position.y - obj_position.y,
-      })
-    } else {
-      None
-    }
-  } else {
-    None
-  }
-}
-
 trait RenderElement {
-  fn resize(&mut self, size: PhysicalSize<u32>) {
+  fn resize(&mut self, size: PhysicalSize<f32>) {
     for element in self.get_elements() {
       element.resize(size);
     }
   }
 
-  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<u32>) {
+  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
     for element in self.get_elements() {
       element.scroll(offset, size);
     }
@@ -302,8 +281,7 @@ trait RenderElement {
 
   fn click(&mut self, position: PhysicalPosition<f64>) {
     for element in self.get_elements() {
-      let (pos, size) = element.get_pos_size();
-      if let Some(pos) = position_in_obj(position.cast(), pos, size) {
+      if let Some(pos) = element.get_dimensions().contains(position.cast()) {
         element.click(pos.cast());
         break;
       }
@@ -326,5 +304,37 @@ trait RenderElement {
 
   fn get_rects(&self) -> Vec<&rectangle::Rectangle>;
   fn get_elements(&mut self) -> Vec<&mut dyn RenderElement>;
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>);
+  fn get_dimensions(&self) -> Dimensions;
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+pub struct Dimensions {
+  x: f32,
+  y: f32,
+  width: f32,
+  height: f32,
+}
+
+impl Dimensions {
+  fn contains(
+    &self,
+    position: PhysicalPosition<f32>,
+  ) -> Option<PhysicalPosition<f32>> {
+    if position.x >= self.x && position.y >= self.y {
+      let end_pos = PhysicalPosition {
+        x: self.x + self.width,
+        y: self.y + self.height,
+      };
+      if position.x <= end_pos.x && position.y <= end_pos.y {
+        Some(PhysicalPosition {
+          x: position.x - self.x,
+          y: position.y - self.y,
+        })
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
 }

@@ -1,8 +1,9 @@
 use crate::renderer::rectangle::Rectangle;
+use crate::renderer::Dimensions;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wgpu_glyph::ab_glyph::FontArc;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::PhysicalSize;
 use winit::event::VirtualKeyCode;
 
 mod code;
@@ -13,8 +14,7 @@ pub struct CodeView {
   text: Rc<RefCell<Vec<String>>>,
   gutter: gutter::Gutter,
   code: code::Code,
-  pub position: PhysicalPosition<u32>,
-  pub size: PhysicalSize<u32>,
+  pub dimensions: Dimensions,
 }
 
 impl CodeView {
@@ -23,8 +23,7 @@ impl CodeView {
     screen_size: PhysicalSize<u32>,
     font: FontArc,
     font_height: f32,
-    position: PhysicalPosition<u32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
     text: String,
   ) -> Self {
     let mut split_text =
@@ -39,8 +38,8 @@ impl CodeView {
       device,
       font.clone(),
       font_height,
-      position,
-      size,
+      screen_size,
+      dimensions,
       Rc::clone(&text),
     );
 
@@ -49,13 +48,10 @@ impl CodeView {
       screen_size,
       font,
       font_height,
-      PhysicalPosition {
-        x: position.x + gutter.size.width,
-        y: position.y,
-      },
-      PhysicalSize {
-        width: size.width - gutter.size.width,
-        height: size.height,
+      Dimensions {
+        x: dimensions.x + gutter.dimensions.width,
+        width: dimensions.width - gutter.dimensions.width,
+        ..dimensions
       },
       Rc::clone(&text),
     );
@@ -64,8 +60,7 @@ impl CodeView {
       code,
       gutter,
       text,
-      position,
-      size,
+      dimensions,
     }
   }
 }
@@ -92,7 +87,7 @@ impl super::RenderElement for CodeView {
     vec![&mut self.gutter, &mut self.code]
   }
 
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
-    (self.position, self.size)
+  fn get_dimensions(&self) -> Dimensions {
+    self.dimensions
   }
 }

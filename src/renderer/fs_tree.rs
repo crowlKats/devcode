@@ -1,4 +1,5 @@
 use crate::renderer::rectangle::Rectangle;
+use crate::renderer::Dimensions;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -113,8 +114,7 @@ impl TreeEntry {
 pub struct FsTree {
   rect: Rectangle,
   font_height: f32,
-  pub position: PhysicalPosition<u32>,
-  pub size: PhysicalSize<u32>,
+  pub dimensions: Dimensions,
   scroll_offset: PhysicalPosition<f64>,
   tree: TreeEntry,
   counter: i32,
@@ -125,18 +125,13 @@ impl FsTree {
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
     font_height: f32,
-    position: PhysicalPosition<u32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
     path: PathBuf,
   ) -> Self {
     let rect = Rectangle::new(
       device,
       screen_size,
-      PhysicalPosition { x: 0.0, y: 0.0 },
-      PhysicalSize {
-        width: 0,
-        height: 0,
-      },
+      Default::default(),
       [0.04, 0.04, 0.04],
       None,
     );
@@ -147,8 +142,7 @@ impl FsTree {
     Self {
       rect,
       font_height,
-      position,
-      size,
+      dimensions,
       scroll_offset: PhysicalPosition { x: 0.0, y: 0.0 },
       tree: TreeEntry::new(path, ignore_set),
       counter: 0,
@@ -157,22 +151,23 @@ impl FsTree {
 }
 
 impl super::RenderElement for FsTree {
-  fn resize(&mut self, screen_size: PhysicalSize<u32>) {
+  fn resize(&mut self, screen_size: PhysicalSize<f32>) {
     self.rect.resize(
-      screen_size,
-      PhysicalPosition { x: 0.0, y: 0.0 },
-      PhysicalSize {
-        width: self.size.width,
+      screen_size.cast(),
+      Dimensions {
+        x: 0.0,
+        y: 0.0,
+        width: self.dimensions.width,
         height: screen_size.height,
       },
     );
-    self.size.height = screen_size.height;
+    self.dimensions.height = screen_size.height;
   }
 
   fn scroll(
     &mut self,
     offset: PhysicalPosition<f64>,
-    _size: PhysicalSize<u32>,
+    _size: PhysicalSize<f32>,
   ) {
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
@@ -234,8 +229,8 @@ impl super::RenderElement for FsTree {
         Region {
           x: 0,
           y: 0,
-          width: self.size.width,
-          height: self.size.height,
+          width: self.dimensions.width as u32,
+          height: self.dimensions.height as u32,
         },
       )
       .unwrap();
@@ -249,7 +244,7 @@ impl super::RenderElement for FsTree {
     vec![]
   }
 
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
-    (self.position, self.size)
+  fn get_dimensions(&self) -> Dimensions {
+    self.dimensions
   }
 }

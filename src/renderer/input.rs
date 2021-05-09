@@ -1,4 +1,5 @@
 use crate::renderer::rectangle::{Rectangle, Region};
+use crate::renderer::Dimensions;
 use unicode_segmentation::UnicodeSegmentation;
 use wgpu_glyph::ab_glyph::{Font, FontArc};
 use wgpu_glyph::{GlyphPositioner, Layout, SectionGeometry, Text};
@@ -17,15 +18,12 @@ impl Cursor {
   pub fn new(
     device: &wgpu::Device,
     screen_size: PhysicalSize<u32>,
-    position: PhysicalPosition<f32>,
-    size: PhysicalSize<u32>,
+    dimensions: Dimensions,
     color: [f32; 3],
     region: Option<Region>,
   ) -> Self {
-    let rect =
-      Rectangle::new(device, screen_size, position, size, color, region);
     Self {
-      rect,
+      rect: Rectangle::new(device, screen_size, dimensions, color, region),
       row: 0,
       column: 0,
       x_offset: 0.0,
@@ -71,13 +69,11 @@ impl TextArea {
     let cursor = Cursor::new(
       device,
       screen_size,
-      PhysicalPosition {
+      Dimensions {
         x: 0.0,
         y: screen_size.height as f32 - font_height,
-      },
-      PhysicalSize {
-        width: 1,
-        height: font_height as u32,
+        width: 1.0,
+        height: font_height,
       },
       [0.7, 0.0, 0.0],
       Some(Region {
@@ -111,7 +107,7 @@ impl super::RenderElement for TextArea {
     vec![]
   }
 
-  fn get_pos_size(&self) -> (PhysicalPosition<u32>, PhysicalSize<u32>) {
+  fn get_dimensions(&self) -> Dimensions {
     todo!()
   }
 }
@@ -299,14 +295,14 @@ pub fn input_special(
 
   cursor.rect.resize(
     size,
-    PhysicalPosition {
+    Dimensions {
       x: offset.x + scroll_offset.x + cursor.x_offset,
       y: size.height as f32
         - scroll_offset.y
         - font_height
         - (cursor.row as f32 * font_height),
+      ..cursor.rect.dimensions
     },
-    cursor.rect.size,
   );
 }
 

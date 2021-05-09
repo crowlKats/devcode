@@ -53,7 +53,10 @@ impl CodeView {
         x: position.x + gutter.size.width,
         y: position.y,
       },
-      size,
+      PhysicalSize {
+        width: size.width - gutter.size.width,
+        height: size.height,
+      },
       Rc::clone(&text),
     );
 

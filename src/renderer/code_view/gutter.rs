@@ -8,6 +8,9 @@ use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{GlyphBrush, HorizontalAlign, Layout, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
+const GUTTER_MARGIN: u32 = 10;
+const GUTTER_PADDING: u32 = 10;
+
 pub struct Gutter {
   text: Rc<RefCell<Vec<String>>>,
   rect: Rectangle,
@@ -34,20 +37,22 @@ impl Gutter {
       .collect::<Vec<String>>();
     let line_numbers_width = max_line_length(&line_numbers, font, font_height);
 
+    let rect_size = line_numbers_width as u32 + GUTTER_PADDING;
+
     let rect = Rectangle::new(
       device,
       size,
       PhysicalPosition { x: 0.0, y: 0.0 },
       PhysicalSize {
-        width: position.x + (line_numbers_width as u32 + 10),
+        width: position.x + rect_size,
         height: size.height,
       },
-      [0.05, 0.05, 0.05],
+      [0.5, 0.05, 0.05],
       None,
     );
 
     let size = PhysicalSize {
-      width: line_numbers_width as u32 + 20,
+      width: rect_size + GUTTER_MARGIN,
       height: size.height,
     };
 
@@ -71,7 +76,7 @@ impl super::super::RenderElement for Gutter {
         y: 0.0,
       },
       PhysicalSize {
-        width: self.size.width,
+        width: self.size.width - GUTTER_MARGIN,
         height: screen_size.height,
       },
     );
@@ -111,7 +116,8 @@ impl super::super::RenderElement for Gutter {
 
     glyph_brush.queue(Section {
       screen_position: (
-        (self.position.x + (self.size.width - 20)) as f32,
+        (self.position.x + (self.size.width - (GUTTER_PADDING + GUTTER_MARGIN)))
+          as f32,
         -((-self.scroll_offset_y as f32) % self.font_height),
       ),
       text: vec![Text::new(&line_numbers)

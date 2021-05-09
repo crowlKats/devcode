@@ -133,7 +133,10 @@ impl FsTree {
       device,
       screen_size,
       PhysicalPosition { x: 0.0, y: 0.0 },
-      size,
+      PhysicalSize {
+        width: 0,
+        height: 0,
+      },
       [0.04, 0.04, 0.04],
       None,
     );

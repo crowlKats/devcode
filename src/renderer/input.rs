@@ -303,10 +303,7 @@ pub fn input_special(
     size,
     Dimensions {
       x: offset.x + scroll_offset.x + cursor.x_offset,
-      y: size.height as f32
-        - scroll_offset.y
-        - font_height
-        - (cursor.row as f32 * font_height),
+      y: scroll_offset.y + font_height + (cursor.row as f32 * font_height),
       ..cursor.rect.dimensions
     },
   );

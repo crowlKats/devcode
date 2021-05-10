@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
-use wgpu_glyph::{GlyphBrush, Region, Section, Text};
+use wgpu_glyph::{GlyphBrush, Section, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 struct TreeEntry {
@@ -213,12 +213,7 @@ impl super::RenderElement for FsTree {
           screen_size.width,
           screen_size.height,
         ),
-        Region {
-          x: 0,
-          y: 0,
-          width: self.dimensions.width as u32,
-          height: self.dimensions.height as u32,
-        },
+        self.dimensions.into(),
       )
       .unwrap();
   }

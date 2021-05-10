@@ -116,7 +116,7 @@ impl super::super::RenderElement for Gutter {
         (self.dimensions.x
           + (self.dimensions.width - (GUTTER_PADDING + GUTTER_MARGIN))),
         -(((-self.scroll_offset_y as f32) % self.font_height)
-          - (size.height as f32 - self.dimensions.height)),
+          - self.dimensions.y),
       ),
       text: vec![Text::new(&line_numbers)
         .with_color([0.9, 0.9, 0.9, 1.0])
@@ -132,12 +132,7 @@ impl super::super::RenderElement for Gutter {
         encoder,
         target,
         wgpu_glyph::orthographic_projection(size.width, size.height),
-        wgpu_glyph::Region {
-          x: self.dimensions.x as u32,
-          y: size.height - self.dimensions.height as u32,
-          width: self.dimensions.width as u32,
-          height: self.dimensions.height as u32,
-        },
+        self.dimensions.into(),
       )
       .unwrap();
   }

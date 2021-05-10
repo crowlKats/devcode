@@ -1,5 +1,5 @@
 use super::super::input::{max_line_length, Cursor};
-use super::super::rectangle::{Rectangle, Region};
+use super::super::rectangle::Rectangle;
 use crate::renderer::Dimensions;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
@@ -50,18 +50,12 @@ impl Code {
       device,
       screen_size,
       Dimensions {
-        x: dimensions.x,
-        y: screen_size.height as f32 - font_height,
         width: 4.0,
         height: font_height,
+        ..dimensions
       },
       [0.7, 0.0, 0.0],
-      Some(Region {
-        x: dimensions.x as u32,
-        y: screen_size.height - dimensions.height as u32,
-        width: dimensions.width as u32,
-        height: dimensions.height as u32,
-      }),
+      Some(dimensions.into()),
     );
 
     let max_line_length =
@@ -120,19 +114,12 @@ impl super::super::RenderElement for Code {
     self.cursor.rect.resize(
       screen_size.cast(),
       Dimensions {
-        y: screen_size.height
-          - self.font_height
-          - (self.cursor.row as f32 * self.font_height),
+        y: self.font_height - (self.cursor.row as f32 * self.font_height),
         ..self.cursor.rect.dimensions
       },
     );
 
-    self.cursor.rect.region = Some(Region {
-      x: self.dimensions.x as u32,
-      y: (screen_size.height - self.dimensions.height) as u32,
-      width: self.dimensions.width as u32,
-      height: self.dimensions.height as u32,
-    });
+    self.cursor.rect.region = Some(self.dimensions.into());
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
@@ -152,10 +139,9 @@ impl super::super::RenderElement for Code {
         x: self.dimensions.x
           + self.scroll_offset.x as f32
           + self.cursor.x_offset,
-        y: self.dimensions.height
-          - self.font_height
-          - self.scroll_offset.y as f32
-          - (self.cursor.row as f32 * self.font_height),
+        y: self.dimensions.y
+          + self.scroll_offset.y as f32
+          + (self.cursor.row as f32 * self.font_height),
         ..self.cursor.rect.dimensions
       },
     );
@@ -211,7 +197,7 @@ impl super::super::RenderElement for Code {
       screen_position: (
         self.dimensions.x + self.scroll_offset.x as f32,
         -(((-self.scroll_offset.y as f32) % self.font_height)
-          - (size.height as f32 - self.dimensions.height)),
+          - self.dimensions.y),
       ),
       text: self.generate_glyph_text(&vec),
       ..Section::default()
@@ -224,12 +210,7 @@ impl super::super::RenderElement for Code {
         encoder,
         target,
         wgpu_glyph::orthographic_projection(size.width, size.height),
-        wgpu_glyph::Region {
-          x: self.dimensions.x as u32,
-          y: size.height - self.dimensions.height as u32,
-          width: self.dimensions.width as u32,
-          height: self.dimensions.height as u32,
-        },
+        self.dimensions.into(),
       )
       .unwrap();
   }

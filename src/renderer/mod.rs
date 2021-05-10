@@ -342,3 +342,25 @@ impl Dimensions {
     }
   }
 }
+
+impl From<Dimensions> for wgpu_glyph::Region {
+  fn from(item: Dimensions) -> Self {
+    Self {
+      x: item.x as u32,
+      y: item.y as u32,
+      width: item.width as u32,
+      height: item.height as u32,
+    }
+  }
+}
+
+impl From<Dimensions> for rectangle::Region {
+  fn from(item: Dimensions) -> Self {
+    Self {
+      x: item.x as u32,
+      y: item.y as u32,
+      width: item.width as u32,
+      height: item.height as u32,
+    }
+  }
+}

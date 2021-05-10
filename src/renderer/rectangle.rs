@@ -40,15 +40,15 @@ impl Rectangle {
         color,
       }, // top left
       Vertex {
-        position: [position.x + end_position.x, position.y],
+        position: [end_position.x, position.y],
         color,
       }, // top right
       Vertex {
-        position: [position.x, position.y + end_position.y],
+        position: [position.x, end_position.y],
         color,
       }, // bottom left
       Vertex {
-        position: [position.x + end_position.x, position.y + end_position.y],
+        position: [end_position.x, end_position.y],
         color,
       }, // bottom right
     ]
@@ -103,11 +103,16 @@ impl Rectangle {
     (
       PhysicalPosition {
         x: ((dimensions.x / screen_size.width as f32) * 2.0) - 1.0,
-        y: ((dimensions.y / screen_size.height as f32) * 2.0) - 1.0,
+        y: -(((dimensions.y / screen_size.height as f32) * 2.0) - 1.0),
       },
       PhysicalPosition {
-        x: (dimensions.width / screen_size.width as f32) * 2.0,
-        y: (dimensions.height / screen_size.height as f32) * 2.0,
+        x: (((dimensions.x + dimensions.width) / screen_size.width as f32)
+          * 2.0)
+          - 1.0,
+        y: -((((dimensions.y + dimensions.height)
+          / screen_size.height as f32)
+          * 2.0)
+          - 1.0),
       },
     )
   }

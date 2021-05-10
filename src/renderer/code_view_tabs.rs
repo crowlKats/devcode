@@ -35,7 +35,6 @@ impl CodeViewTabs {
       screen_size,
       Dimensions {
         height: TAB_HEIGHT,
-        y: dimensions.height - TAB_HEIGHT,
         ..dimensions
       },
       [0.12, 0.2, 0.89],
@@ -73,10 +72,8 @@ impl CodeViewTabs {
       device,
       screen_size,
       Dimensions {
-        height: TAB_HEIGHT,
-        y: self.dimensions.height - TAB_HEIGHT,
         width: TAB_PADDING + name_width + TAB_PADDING,
-        ..self.dimensions
+        ..self.rect.dimensions
       },
       [0.04, 0.12, 0.81],
       None,
@@ -88,10 +85,9 @@ impl CodeViewTabs {
       self.font.clone(),
       self.font_height,
       Dimensions {
-        y: self.dimensions.y,
-        x: self.dimensions.x,
-        width: self.dimensions.width,
+        y: self.dimensions.y + TAB_HEIGHT,
         height: self.dimensions.height - TAB_HEIGHT,
+        ..self.dimensions
       },
       text,
     );

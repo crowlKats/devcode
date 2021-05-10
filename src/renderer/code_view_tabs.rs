@@ -17,8 +17,8 @@ pub struct CodeViewTabs {
   font: FontArc,
   font_height: f32,
   pub code_views: Vec<(String, Rectangle, CodeView)>,
-  active: usize,
-  rect: Rectangle,
+  active: Option<usize>,
+  tabs_container: Rectangle,
   dimensions: Dimensions,
 }
 
@@ -44,9 +44,9 @@ impl CodeViewTabs {
     Self {
       font,
       font_height,
-      active: 0,
+      active: None,
       code_views: vec![],
-      rect,
+      tabs_container: rect,
       dimensions,
     }
   }
@@ -73,7 +73,7 @@ impl CodeViewTabs {
       screen_size,
       Dimensions {
         width: TAB_PADDING + name_width + TAB_PADDING,
-        ..self.rect.dimensions
+        ..self.tabs_container.dimensions
       },
       [0.04, 0.12, 0.81],
       None,
@@ -95,39 +95,45 @@ impl CodeViewTabs {
     self
       .code_views
       .push((filename.to_string(), rect, code_view));
+    self.active = Some(self.code_views.len() - 1);
     Ok(())
   }
 
-  fn get_active(&mut self) -> &mut CodeView {
-    &mut self.code_views[self.active].2
+  fn get_active(&mut self) -> Option<&mut CodeView> {
+    if let Some(i) = self.active {
+      Some(&mut self.code_views[i].2)
+    } else {
+      None
+    }
   }
 }
 
 impl super::RenderElement for CodeViewTabs {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
-    self.rect.resize(
+    self.tabs_container.resize(
       screen_size.cast(),
       Dimensions {
         width: screen_size.width,
-        ..self.rect.dimensions
+        ..self.tabs_container.dimensions
       },
     );
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
-    self.get_active().scroll(offset, size);
+    self.get_active().map(|active| active.scroll(offset, size));
   }
 
   fn click(&mut self, position: PhysicalPosition<f64>) {
-    if let Some(pos) = self.rect.dimensions.contains(position.cast()) {
+    if let Some(pos) = self.tabs_container.dimensions.contains(position.cast())
+    {
       for (i, (_, rect, _)) in self.code_views.iter().enumerate() {
         if rect.dimensions.contains(pos).is_some() {
-          self.active = i;
+          self.active = Some(i);
           break;
         }
       }
     } else {
-      self.get_active().click(position);
+      self.get_active().map(|active| active.click(position));
     }
   }
 
@@ -165,25 +171,26 @@ impl super::RenderElement for CodeViewTabs {
       )
       .unwrap();
 
-    self.get_active().redraw(
-      glyph_brush,
-      device,
-      staging_belt,
-      encoder,
-      target,
-      size,
-    );
+    self.get_active().map(|active| {
+      active.redraw(glyph_brush, device, staging_belt, encoder, target, size)
+    });
   }
 
   fn get_rects(&self) -> Vec<&Rectangle> {
-    let mut vec = vec![&self.rect];
+    let mut vec = vec![&self.tabs_container];
     vec.extend(self.code_views.iter().map(|(_, rect, _)| rect));
-    vec.extend(self.code_views[self.active].2.get_rects());
+    if let Some(i) = self.active {
+      vec.extend(self.code_views[i].2.get_rects());
+    }
     vec
   }
 
   fn get_elements(&mut self) -> Vec<&mut dyn super::RenderElement> {
-    vec![self.get_active()]
+    if let Some(active) = self.get_active() {
+      vec![active]
+    } else {
+      vec![]
+    }
   }
 
   fn get_dimensions(&self) -> Dimensions {
@@ -197,10 +204,14 @@ impl super::input::TextInput for CodeViewTabs {
     screen_size: PhysicalSize<u32>,
     key: VirtualKeyCode,
   ) {
-    self.get_active().input_special(screen_size, key);
+    self
+      .get_active()
+      .map(|active| active.input_special(screen_size, key));
   }
 
   fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
-    self.get_active().input_char(screen_size, ch);
+    self
+      .get_active()
+      .map(|active| active.input_char(screen_size, ch));
   }
 }

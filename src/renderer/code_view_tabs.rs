@@ -120,7 +120,9 @@ impl super::RenderElement for CodeViewTabs {
   }
 
   fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
-    self.get_active().map(|active| active.scroll(offset, size));
+    if let Some(active) = self.get_active() {
+      active.scroll(offset, size);
+    }
   }
 
   fn click(&mut self, position: PhysicalPosition<f64>) {
@@ -132,8 +134,8 @@ impl super::RenderElement for CodeViewTabs {
           break;
         }
       }
-    } else {
-      self.get_active().map(|active| active.click(position));
+    } else if let Some(active) = self.get_active() {
+      active.click(position);
     }
   }
 
@@ -171,9 +173,9 @@ impl super::RenderElement for CodeViewTabs {
       )
       .unwrap();
 
-    self.get_active().map(|active| {
-      active.redraw(glyph_brush, device, staging_belt, encoder, target, size)
-    });
+    if let Some(active) = self.get_active() {
+      active.redraw(glyph_brush, device, staging_belt, encoder, target, size);
+    }
   }
 
   fn get_rects(&self) -> Vec<&Rectangle> {
@@ -204,14 +206,14 @@ impl super::input::TextInput for CodeViewTabs {
     screen_size: PhysicalSize<u32>,
     key: VirtualKeyCode,
   ) {
-    self
-      .get_active()
-      .map(|active| active.input_special(screen_size, key));
+    if let Some(active) = self.get_active() {
+      active.input_special(screen_size, key);
+    }
   }
 
   fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
-    self
-      .get_active()
-      .map(|active| active.input_char(screen_size, ch));
+    if let Some(active) = self.get_active() {
+      active.input_char(screen_size, ch);
+    }
   }
 }

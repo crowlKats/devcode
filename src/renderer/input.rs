@@ -214,7 +214,7 @@ pub fn cursor_x_position(
 
 #[allow(clippy::too_many_arguments)]
 pub fn input_special(
-  size: PhysicalSize<u32>,
+  screen_size: PhysicalSize<u32>,
   key: VirtualKeyCode,
   text: &mut Vec<String>,
   cursor: &mut Cursor,
@@ -300,7 +300,7 @@ pub fn input_special(
   }
 
   cursor.rect.resize(
-    size,
+    screen_size,
     Dimensions {
       x: offset.x + scroll_offset.x + cursor.x_offset,
       y: scroll_offset.y + font_height + (cursor.row as f32 * font_height),
@@ -311,7 +311,7 @@ pub fn input_special(
 
 #[allow(clippy::too_many_arguments)]
 pub fn input_char(
-  size: PhysicalSize<u32>,
+  screen_size: PhysicalSize<u32>,
   ch: char,
   text: &mut Vec<String>,
   cursor: &mut Cursor,
@@ -323,7 +323,7 @@ pub fn input_char(
   let input_spc =
     |key: VirtualKeyCode, text: &mut Vec<String>, cursor: &mut Cursor| {
       input_special(
-        size,
+        screen_size,
         key,
         text,
         cursor,

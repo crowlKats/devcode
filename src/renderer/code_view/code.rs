@@ -74,9 +74,13 @@ impl Code {
 }
 
 impl super::super::input::TextInput for Code {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
+  fn input_special(
+    &mut self,
+    screen_size: PhysicalSize<u32>,
+    key: VirtualKeyCode,
+  ) {
     super::super::input::input_special(
-      size,
+      screen_size,
       key,
       &mut self.text.borrow_mut(),
       &mut self.cursor,
@@ -90,9 +94,9 @@ impl super::super::input::TextInput for Code {
     );
   }
 
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
+  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
     self.max_line_length = super::super::input::input_char(
-      size,
+      screen_size,
       ch,
       &mut self.text.borrow_mut(),
       &mut self.cursor,

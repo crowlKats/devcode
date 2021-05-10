@@ -192,11 +192,15 @@ impl super::RenderElement for CodeViewTabs {
 }
 
 impl super::input::TextInput for CodeViewTabs {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    self.get_active().input_special(size, key);
+  fn input_special(
+    &mut self,
+    screen_size: PhysicalSize<u32>,
+    key: VirtualKeyCode,
+  ) {
+    self.get_active().input_special(screen_size, key);
   }
 
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
-    self.get_active().input_char(size, ch);
+  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
+    self.get_active().input_char(screen_size, ch);
   }
 }

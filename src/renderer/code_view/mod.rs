@@ -66,12 +66,16 @@ impl CodeView {
 }
 
 impl super::input::TextInput for CodeView {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
-    self.code.input_special(size, key);
+  fn input_special(
+    &mut self,
+    screen_size: PhysicalSize<u32>,
+    key: VirtualKeyCode,
+  ) {
+    self.code.input_special(screen_size, key);
   }
 
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
-    self.code.input_char(size, ch);
+  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
+    self.code.input_char(screen_size, ch);
   }
 }
 

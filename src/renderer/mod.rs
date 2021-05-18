@@ -5,7 +5,9 @@ pub mod input;
 mod rectangle;
 
 use futures::task::SpawnExt;
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
 use wgpu_glyph::ab_glyph::Font;
@@ -19,7 +21,7 @@ pub struct Renderer {
   pub window: winit::window::Window,
   pub size: PhysicalSize<u32>,
   surface: wgpu::Surface,
-  device: wgpu::Device,
+  device: Rc<wgpu::Device>,
   queue: wgpu::Queue,
   swap_chain: wgpu::SwapChain,
   staging_belt: wgpu::util::StagingBelt,
@@ -28,7 +30,7 @@ pub struct Renderer {
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   rectangle_render_pipeline: wgpu::RenderPipeline,
   fs_tree: fs_tree::FsTree,
-  pub code_views: code_view_tabs::CodeViewTabs,
+  pub code_views: Rc<RefCell<code_view_tabs::CodeViewTabs>>,
 }
 
 impl Renderer {
@@ -84,8 +86,9 @@ impl Renderer {
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
+    let device = Rc::new(device);
     let mut code_views = code_view_tabs::CodeViewTabs::new(
-      &device,
+      Rc::clone(&device),
       size.cast(),
       font,
       font_height,
@@ -96,9 +99,9 @@ impl Renderer {
         height: size.height as f32,
       },
     );
-    code_views.add(&device, size.cast(), filepath)?;
+    code_views.add(size.cast(), &filepath)?;
+    let code_views = Rc::new(RefCell::new(code_views));
 
-    let path = std::path::Path::new("./").canonicalize()?;
     let fs_tree = fs_tree::FsTree::new(
       &device,
       size.cast(),
@@ -109,7 +112,8 @@ impl Renderer {
         width: 400.0,
         height: size.height as f32,
       },
-      path,
+      std::path::Path::new("./").canonicalize()?,
+      Rc::clone(&code_views),
     );
 
     let rectangle_render_pipeline = rectangle::Rectangle::pipeline(&device);
@@ -232,7 +236,7 @@ impl Renderer {
       }
     }
 
-    self.code_views.redraw(
+    self.code_views.borrow_mut().redraw(
       &mut self.glyph_brush,
       &self.device,
       &mut self.staging_belt,
@@ -267,7 +271,7 @@ impl Renderer {
 
   fn get_elements(&mut self) -> Vec<&mut dyn RenderElement> {
     let mut vec: Vec<&mut dyn RenderElement> = vec![&mut self.fs_tree];
-    vec.extend(self.code_views.get_elements());
+    vec.extend(self.code_views.borrow_mut().get_elements());
     vec
   }
 }

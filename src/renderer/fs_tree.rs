@@ -1,8 +1,10 @@
 use crate::renderer::rectangle::Rectangle;
 use crate::renderer::Dimensions;
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::FromStr;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, Device, TextureView};
@@ -118,6 +120,7 @@ pub struct FsTree {
   scroll_offset: PhysicalPosition<f64>,
   tree: TreeEntry,
   counter: i32,
+  code_views: Rc<RefCell<super::code_view_tabs::CodeViewTabs>>,
 }
 
 impl FsTree {
@@ -127,6 +130,7 @@ impl FsTree {
     font_height: f32,
     dimensions: Dimensions,
     path: PathBuf,
+    code_views: Rc<RefCell<super::code_view_tabs::CodeViewTabs>>,
   ) -> Self {
     let rect =
       Rectangle::new(device, screen_size, dimensions, [0.04, 0.04, 0.04], None);
@@ -141,6 +145,7 @@ impl FsTree {
       scroll_offset: PhysicalPosition { x: 0.0, y: 0.0 },
       tree: TreeEntry::new(path, ignore_set),
       counter: 0,
+      code_views,
     }
   }
 }
@@ -164,14 +169,18 @@ impl super::RenderElement for FsTree {
   fn click(
     &mut self,
     position: PhysicalPosition<f64>,
-    _screen_size: PhysicalSize<f32>,
+    screen_size: PhysicalSize<f32>,
   ) {
     let index = ((position.y - self.scroll_offset.y) / self.font_height as f64)
       .floor() as usize;
     let mut i = 0;
     self.counter = self.tree.walk(&mut |entry| {
-      if index == i && entry.sub_entry.is_some() {
-        entry.folded = !entry.folded;
+      if index == i {
+        if entry.sub_entry.is_some() {
+          entry.folded = !entry.folded;
+        } else {
+          self.code_views.borrow_mut().add(screen_size, &entry.path);
+        }
       }
       i += 1;
       !entry.folded

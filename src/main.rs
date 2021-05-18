@@ -63,12 +63,13 @@ fn main() -> Result<(), anyhow::Error> {
         if input.state == ElementState::Pressed {
           ren
             .code_views
+            .borrow_mut()
             .input_special(ren.size.cast(), input.virtual_keycode.unwrap());
           ren.window.request_redraw();
         }
       }
       WindowEvent::ReceivedCharacter(ch) => {
-        ren.code_views.input_char(ren.size.cast(), ch);
+        ren.code_views.borrow_mut().input_char(ren.size.cast(), ch);
       }
       WindowEvent::CursorMoved { position, .. } => mouse_pos = position,
       WindowEvent::MouseInput { state, .. } => {

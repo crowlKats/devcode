@@ -3,6 +3,7 @@ use crate::renderer::input::line_length;
 use crate::renderer::rectangle::Rectangle;
 use crate::renderer::Dimensions;
 use std::path::PathBuf;
+use std::rc::Rc;
 use wgpu::util::StagingBelt;
 use wgpu::{CommandEncoder, TextureView};
 use wgpu_glyph::ab_glyph::FontArc;
@@ -14,6 +15,7 @@ const TAB_HEIGHT: f32 = 50.0;
 const TAB_PADDING: f32 = 15.0;
 
 pub struct CodeViewTabs {
+  device: Rc<wgpu::Device>,
   font: FontArc,
   font_height: f32,
   pub code_views: Vec<(String, Rectangle, CodeView)>,
@@ -24,14 +26,14 @@ pub struct CodeViewTabs {
 
 impl CodeViewTabs {
   pub fn new(
-    device: &wgpu::Device,
+    device: Rc<wgpu::Device>,
     screen_size: PhysicalSize<f32>,
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
   ) -> Self {
     let rect = Rectangle::new(
-      device,
+      &device,
       screen_size,
       Dimensions {
         height: TAB_HEIGHT,
@@ -42,6 +44,7 @@ impl CodeViewTabs {
     );
 
     Self {
+      device,
       font,
       font_height,
       active: None,
@@ -53,9 +56,8 @@ impl CodeViewTabs {
 
   pub fn add(
     &mut self,
-    device: &wgpu::Device,
     screen_size: PhysicalSize<f32>,
-    filepath: PathBuf,
+    filepath: &PathBuf,
   ) -> Result<(), anyhow::Error> {
     if !filepath.exists() {
       anyhow::bail!("path doesn't exist");
@@ -63,13 +65,13 @@ impl CodeViewTabs {
     if !filepath.is_file() {
       anyhow::bail!("path isn't a file");
     }
-    let text = std::fs::read_to_string(&filepath)?;
+    let text = std::fs::read_to_string(filepath)?;
 
     let filename = filepath.file_name().unwrap().to_str().unwrap();
     let name_width = line_length(filename, self.font.clone(), self.font_height);
 
     let rect = Rectangle::new(
-      device,
+      &self.device,
       screen_size,
       Dimensions {
         width: TAB_PADDING + name_width + TAB_PADDING,
@@ -80,7 +82,7 @@ impl CodeViewTabs {
     );
 
     let code_view = CodeView::new(
-      &device,
+      &self.device,
       screen_size,
       self.font.clone(),
       self.font_height,

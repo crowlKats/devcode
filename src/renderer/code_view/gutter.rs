@@ -65,16 +65,11 @@ impl Gutter {
 
 impl super::super::RenderElement for Gutter {
   fn resize(&mut self, screen_size: PhysicalSize<f32>) {
-    self.dimensions.height = screen_size.height;
-    self.dimensions.width = screen_size.width;
-
     self.rect.resize(
       screen_size.cast(),
       Dimensions {
-        x: self.dimensions.x,
-        y: self.dimensions.y,
         width: self.dimensions.width - GUTTER_MARGIN,
-        height: self.dimensions.height,
+        ..self.dimensions
       },
     );
   }

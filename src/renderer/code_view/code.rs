@@ -40,7 +40,7 @@ impl Code {
 
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
@@ -76,7 +76,7 @@ impl Code {
 impl super::super::input::TextInput for Code {
   fn input_special(
     &mut self,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     key: VirtualKeyCode,
   ) {
     super::super::input::input_special(
@@ -94,7 +94,7 @@ impl super::super::input::TextInput for Code {
     );
   }
 
-  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
+  fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
     self.max_line_length = super::super::input::input_char(
       screen_size,
       ch,
@@ -126,10 +126,14 @@ impl super::super::RenderElement for Code {
     self.cursor.rect.region = Some(self.dimensions.into());
   }
 
-  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
+  fn scroll(
+    &mut self,
+    offset: PhysicalPosition<f64>,
+    screen_size: PhysicalSize<f32>,
+  ) {
     if offset.x.abs() > offset.y.abs() {
       self.scroll_offset.x = (self.scroll_offset.x - offset.x)
-        .max(size.width as f64 - self.max_line_length as f64) // TODO
+        .max((screen_size.width - self.max_line_length) as f64) // TODO
         .min(0.0);
     } else {
       self.scroll_offset.y = (self.scroll_offset.y + offset.y).min(0.0).max(
@@ -138,7 +142,7 @@ impl super::super::RenderElement for Code {
     }
 
     self.cursor.rect.resize(
-      size.cast(),
+      screen_size,
       Dimensions {
         x: self.dimensions.x
           + self.scroll_offset.x as f32
@@ -151,7 +155,11 @@ impl super::super::RenderElement for Code {
     );
   }
 
-  fn click(&mut self, position: PhysicalPosition<f64>) {
+  fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    _screen_size: PhysicalSize<f32>,
+  ) {
     let line = ((position.y - self.scroll_offset.y) / self.font_height as f64)
       .floor() as usize;
     let vec = Ref::map(self.text.borrow(), |v| v[line..line + 1].as_ref());

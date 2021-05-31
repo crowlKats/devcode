@@ -97,21 +97,18 @@ impl Rectangle {
   }
 
   fn calc_size(
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
   ) -> (PhysicalPosition<f32>, PhysicalPosition<f32>) {
     (
       PhysicalPosition {
-        x: ((dimensions.x / screen_size.width as f32) * 2.0) - 1.0,
-        y: -(((dimensions.y / screen_size.height as f32) * 2.0) - 1.0),
+        x: ((dimensions.x / screen_size.width) * 2.0) - 1.0,
+        y: -(((dimensions.y / screen_size.height) * 2.0) - 1.0),
       },
       PhysicalPosition {
-        x: (((dimensions.x + dimensions.width) / screen_size.width as f32)
-          * 2.0)
+        x: (((dimensions.x + dimensions.width) / screen_size.width) * 2.0)
           - 1.0,
-        y: -((((dimensions.y + dimensions.height)
-          / screen_size.height as f32)
-          * 2.0)
+        y: -((((dimensions.y + dimensions.height) / screen_size.height) * 2.0)
           - 1.0),
       },
     )
@@ -119,7 +116,7 @@ impl Rectangle {
 
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
     color: [f32; 3],
     region: Option<Region>,
@@ -145,7 +142,7 @@ impl Rectangle {
 
   pub fn resize(
     &mut self,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
   ) {
     self.dimensions = dimensions;

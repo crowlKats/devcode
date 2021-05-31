@@ -123,7 +123,7 @@ pub struct FsTree {
 impl FsTree {
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     font_height: f32,
     dimensions: Dimensions,
     path: PathBuf,
@@ -154,14 +154,18 @@ impl super::RenderElement for FsTree {
   fn scroll(
     &mut self,
     offset: PhysicalPosition<f64>,
-    _size: PhysicalSize<f32>,
+    _screen_size: PhysicalSize<f32>,
   ) {
     self.scroll_offset.y = (self.scroll_offset.y + offset.y)
       .min(0.0)
       .max(-((self.counter - 3) as f32 * self.font_height) as f64);
   }
 
-  fn click(&mut self, position: PhysicalPosition<f64>) {
+  fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    _screen_size: PhysicalSize<f32>,
+  ) {
     let index = ((position.y - self.scroll_offset.y) / self.font_height as f64)
       .floor() as usize;
     let mut i = 0;

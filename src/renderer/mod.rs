@@ -84,10 +84,24 @@ impl Renderer {
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
+    let mut code_views = code_view_tabs::CodeViewTabs::new(
+      &device,
+      size.cast(),
+      font,
+      font_height,
+      Dimensions {
+        x: 400.0,
+        y: 0.0,
+        width: size.width as f32 - 400.0,
+        height: size.height as f32,
+      },
+    );
+    code_views.add(&device, size.cast(), filepath)?;
+
     let path = std::path::Path::new("./").canonicalize()?;
     let fs_tree = fs_tree::FsTree::new(
       &device,
-      size,
+      size.cast(),
       font_height,
       Dimensions {
         x: 0.0,
@@ -98,24 +112,11 @@ impl Renderer {
       path,
     );
 
-    let mut code_views = code_view_tabs::CodeViewTabs::new(
-      &device,
-      size,
-      font,
-      font_height,
-      Dimensions {
-        x: 400.0,
-        y: 0.0,
-        width: size.width as f32 - 400.0,
-        height: size.height as f32,
-      },
-    );
-    code_views.add(&device, size, filepath)?;
     let rectangle_render_pipeline = rectangle::Rectangle::pipeline(&device);
     Ok(Self {
       window,
-      surface,
       size,
+      surface,
       device,
       queue,
       swap_chain,
@@ -123,9 +124,9 @@ impl Renderer {
       local_spawner,
       local_pool,
       glyph_brush,
+      rectangle_render_pipeline,
       fs_tree,
       code_views,
-      rectangle_render_pipeline,
     })
   }
 
@@ -173,9 +174,10 @@ impl Renderer {
     state: ElementState,
   ) {
     if state == ElementState::Pressed {
+      let size = self.size.cast();
       for element in self.get_elements() {
         if let Some(pos) = element.get_dimensions().contains(position.cast()) {
-          element.click(pos.cast());
+          element.click(pos.cast(), size);
           self.window.request_redraw();
           break;
         }
@@ -277,16 +279,24 @@ trait RenderElement {
     }
   }
 
-  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
+  fn scroll(
+    &mut self,
+    offset: PhysicalPosition<f64>,
+    screen_size: PhysicalSize<f32>,
+  ) {
     for element in self.get_elements() {
-      element.scroll(offset, size);
+      element.scroll(offset, screen_size);
     }
   }
 
-  fn click(&mut self, position: PhysicalPosition<f64>) {
+  fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    screen_size: PhysicalSize<f32>,
+  ) {
     for element in self.get_elements() {
       if let Some(pos) = element.get_dimensions().contains(position.cast()) {
-        element.click(pos.cast());
+        element.click(pos.cast(), screen_size);
         break;
       }
     }

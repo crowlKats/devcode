@@ -17,7 +17,7 @@ pub struct Cursor {
 impl Cursor {
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
     color: [f32; 3],
     region: Option<Region>,
@@ -32,8 +32,12 @@ impl Cursor {
 }
 
 pub trait TextInput {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode);
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char);
+  fn input_special(
+    &mut self,
+    screen_size: PhysicalSize<f32>,
+    key: VirtualKeyCode,
+  );
+  fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char);
 }
 
 pub struct TextArea {
@@ -51,7 +55,7 @@ impl TextArea {
     text: String,
     font_height: f32,
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     multiline: Option<f32>,
   ) -> Self {
     let mut split_text =
@@ -79,8 +83,8 @@ impl TextArea {
       Some(Region {
         x: 0,
         y: 0,
-        width: screen_size.width,
-        height: screen_size.height,
+        width: screen_size.width as u32,
+        height: screen_size.height as u32,
       }),
     );
 
@@ -113,9 +117,13 @@ impl super::RenderElement for TextArea {
 }
 
 impl TextInput for TextArea {
-  fn input_special(&mut self, size: PhysicalSize<u32>, key: VirtualKeyCode) {
+  fn input_special(
+    &mut self,
+    screen_size: PhysicalSize<f32>,
+    key: VirtualKeyCode,
+  ) {
     input_special(
-      size,
+      screen_size,
       key,
       &mut self.text,
       &mut self.cursor,
@@ -126,9 +134,9 @@ impl TextInput for TextArea {
     );
   }
 
-  fn input_char(&mut self, size: PhysicalSize<u32>, ch: char) {
+  fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
     self.max_line_length = input_char(
-      size,
+      screen_size,
       ch,
       &mut self.text,
       &mut self.cursor,
@@ -199,14 +207,10 @@ pub fn cursor_x_position(
   if let Some(section_glyph) = section_glyphs.get(column) {
     Some(section_glyph.glyph.position.x)
   } else if column != 0 {
-    if let Some(section_glyph) = section_glyphs.get(column - 1) {
-      Some(
-        section_glyph.glyph.position.x
-          + font.glyph_bounds(&section_glyph.glyph).width(),
-      )
-    } else {
-      None
-    }
+    section_glyphs.get(column - 1).map(|section_glyph| {
+      section_glyph.glyph.position.x
+        + font.glyph_bounds(&section_glyph.glyph).width()
+    })
   } else {
     None
   }
@@ -214,7 +218,7 @@ pub fn cursor_x_position(
 
 #[allow(clippy::too_many_arguments)]
 pub fn input_special(
-  screen_size: PhysicalSize<u32>,
+  screen_size: PhysicalSize<f32>,
   key: VirtualKeyCode,
   text: &mut Vec<String>,
   cursor: &mut Cursor,
@@ -311,7 +315,7 @@ pub fn input_special(
 
 #[allow(clippy::too_many_arguments)]
 pub fn input_char(
-  screen_size: PhysicalSize<u32>,
+  screen_size: PhysicalSize<f32>,
   ch: char,
   text: &mut Vec<String>,
   cursor: &mut Cursor,

@@ -20,7 +20,7 @@ pub struct CodeView {
 impl CodeView {
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
@@ -57,9 +57,9 @@ impl CodeView {
     );
 
     Self {
-      code,
-      gutter,
       text,
+      gutter,
+      code,
       dimensions,
     }
   }
@@ -68,13 +68,13 @@ impl CodeView {
 impl super::input::TextInput for CodeView {
   fn input_special(
     &mut self,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     key: VirtualKeyCode,
   ) {
     self.code.input_special(screen_size, key);
   }
 
-  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
+  fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
     self.code.input_char(screen_size, ch);
   }
 }

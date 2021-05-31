@@ -25,7 +25,7 @@ pub struct CodeViewTabs {
 impl CodeViewTabs {
   pub fn new(
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
@@ -54,7 +54,7 @@ impl CodeViewTabs {
   pub fn add(
     &mut self,
     device: &wgpu::Device,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     filepath: PathBuf,
   ) -> Result<(), anyhow::Error> {
     if !filepath.exists() {
@@ -119,13 +119,21 @@ impl super::RenderElement for CodeViewTabs {
     );
   }
 
-  fn scroll(&mut self, offset: PhysicalPosition<f64>, size: PhysicalSize<f32>) {
+  fn scroll(
+    &mut self,
+    offset: PhysicalPosition<f64>,
+    screen_size: PhysicalSize<f32>,
+  ) {
     if let Some(active) = self.get_active() {
-      active.scroll(offset, size);
+      active.scroll(offset, screen_size);
     }
   }
 
-  fn click(&mut self, position: PhysicalPosition<f64>) {
+  fn click(
+    &mut self,
+    position: PhysicalPosition<f64>,
+    screen_size: PhysicalSize<f32>,
+  ) {
     if let Some(pos) = self.tabs_container.dimensions.contains(position.cast())
     {
       for (i, (_, rect, _)) in self.code_views.iter().enumerate() {
@@ -135,7 +143,7 @@ impl super::RenderElement for CodeViewTabs {
         }
       }
     } else if let Some(active) = self.get_active() {
-      active.click(position);
+      active.click(position, screen_size);
     }
   }
 
@@ -203,7 +211,7 @@ impl super::RenderElement for CodeViewTabs {
 impl super::input::TextInput for CodeViewTabs {
   fn input_special(
     &mut self,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     key: VirtualKeyCode,
   ) {
     if let Some(active) = self.get_active() {
@@ -211,7 +219,7 @@ impl super::input::TextInput for CodeViewTabs {
     }
   }
 
-  fn input_char(&mut self, screen_size: PhysicalSize<u32>, ch: char) {
+  fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
     if let Some(active) = self.get_active() {
       active.input_char(screen_size, ch);
     }

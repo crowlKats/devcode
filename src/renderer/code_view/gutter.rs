@@ -25,7 +25,7 @@ impl Gutter {
     device: &wgpu::Device,
     font: FontArc,
     font_height: f32,
-    screen_size: PhysicalSize<u32>,
+    screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
     text: Rc<RefCell<Vec<String>>>,
   ) -> Self {
@@ -82,7 +82,7 @@ impl super::super::RenderElement for Gutter {
   fn scroll(
     &mut self,
     offset: PhysicalPosition<f64>,
-    _size: PhysicalSize<f32>,
+    _screen_size: PhysicalSize<f32>,
   ) {
     self.scroll_offset_y = (self.scroll_offset_y + offset.y)
       .min(0.0)

@@ -13,3 +13,8 @@ futures = "0.3.14"
 shellexpand = "2.1.0"
 bytemuck = { version = "1.5.1", features = [ "derive" ] }
 unicode-segmentation = "1.7.1"
+tree-sitter = "0.19.5"
+
+[build-dependencies]
+anyhow = "1.0.40"
+cc = "1.0.68"

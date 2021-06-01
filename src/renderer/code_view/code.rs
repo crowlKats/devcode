@@ -3,13 +3,22 @@ use super::super::rectangle::Rectangle;
 use crate::renderer::Dimensions;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
+use tree_sitter::Language;
 use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{GlyphPositioner, Layout, Section, SectionGeometry, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
+extern "C" {
+  fn tree_sitter_rust() -> Language;
+}
+
 pub struct Code {
   font: FontArc,
+  #[allow(dead_code)]
+  tree_sitter_parser: tree_sitter::Parser,
+  #[allow(dead_code)]
+  tree_sitter_tree: tree_sitter::Tree,
   font_height: f32,
   text: Rc<RefCell<Vec<String>>>,
   scroll_offset: PhysicalPosition<f64>,
@@ -61,8 +70,21 @@ impl Code {
     let max_line_length =
       max_line_length(&text.borrow(), font.clone(), font_height);
 
+    let mut tree_sitter_parser = tree_sitter::Parser::new();
+    let language = unsafe { tree_sitter_rust() };
+    tree_sitter_parser.set_language(language).unwrap();
+
+    let parse_text: Vec<u8> =
+      text.borrow().iter().fold(vec![], |mut vec, line| {
+        vec.extend_from_slice(line.as_bytes());
+        vec
+      });
+    let tree_sitter_tree = tree_sitter_parser.parse(parse_text, None).unwrap();
+
     Self {
       font,
+      tree_sitter_parser,
+      tree_sitter_tree,
       font_height,
       text,
       scroll_offset: PhysicalPosition { x: 0.0, y: 0.0 },

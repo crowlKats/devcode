@@ -101,7 +101,7 @@ impl super::super::RenderElement for Gutter {
 
     let mut line_count = upper_bound;
     let mut line_numbers = String::new();
-    for _ in &self.text.borrow()[upper_bound..=lower_bound] {
+    for _ in &self.text.borrow()[upper_bound..lower_bound] {
       line_count += 1;
       line_numbers += &format!("{}\n", line_count);
     }

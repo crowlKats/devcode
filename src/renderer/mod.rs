@@ -28,6 +28,7 @@ pub struct Renderer {
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   rectangle_render_pipeline: wgpu::RenderPipeline,
   fs_tree: fs_tree::FsTree,
+  pub font_height: f32,
   pub code_views: code_view_tabs::CodeViewTabs,
 }
 
@@ -129,6 +130,7 @@ impl Renderer {
       glyph_brush,
       rectangle_render_pipeline,
       fs_tree,
+      font_height,
       code_views,
     })
   }

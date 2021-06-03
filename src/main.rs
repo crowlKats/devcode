@@ -45,10 +45,15 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::MouseWheel { delta, .. } => {
         match delta {
           MouseScrollDelta::LineDelta(x, y) => {
+            let dy = if y > 0.0 {
+              y + ren.font_height
+            } else {
+              y - ren.font_height
+            };
             ren.scroll(
               winit::dpi::PhysicalPosition {
                 x: x as f64,
-                y: y as f64,
+                y: dy as f64,
               },
               mouse_pos,
             );

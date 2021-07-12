@@ -203,8 +203,8 @@ impl Renderer {
     {
       let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: None,
-        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-          attachment: &frame.view,
+        color_attachments: &[wgpu::RenderPassColorAttachment {
+          view: &frame.view,
           resolve_target: None,
           ops: wgpu::Operations {
             load: wgpu::LoadOp::Clear(wgpu::Color {

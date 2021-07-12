@@ -5,16 +5,16 @@ authors = ["crowlkats <13135287+crowlKats@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-winit = "0.24.0"
-wgpu = "0.7.1"
-wgpu_glyph = "0.11.0"
-anyhow = "1.0.40"
-futures = "0.3.14"
+winit = "0.25.0"
+wgpu = "0.9.0"
+wgpu_glyph = "0.13.0"
+anyhow = "1.0.42"
+futures = "0.3.15"
 shellexpand = "2.1.0"
-bytemuck = { version = "1.5.1", features = [ "derive" ] }
-unicode-segmentation = "1.7.1"
+bytemuck = { version = "1.7.0", features = [ "derive" ] }
+unicode-segmentation = "1.8.0"
 tree-sitter = "0.19.5"
 
 [build-dependencies]
-anyhow = "1.0.40"
-cc = "1.0.68"
+anyhow = "1.0.42"
+cc = "1.0.69"

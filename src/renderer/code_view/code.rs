@@ -225,9 +225,8 @@ impl super::super::RenderElement for Code {
       + (self.dimensions.height / self.font_height).ceil() as usize)
       .min(self.text.borrow().len());
 
-    let vec = Ref::map(self.text.borrow(), |v| {
-      v[upper_bound..=lower_bound].as_ref()
-    });
+    let vec =
+      Ref::map(self.text.borrow(), |v| v[upper_bound..lower_bound].as_ref());
     glyph_brush.queue(Section {
       screen_position: (
         self.dimensions.x + self.scroll_offset.x as f32,

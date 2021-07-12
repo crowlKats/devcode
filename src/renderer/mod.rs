@@ -28,6 +28,7 @@ pub struct Renderer {
   glyph_brush: wgpu_glyph::GlyphBrush<()>,
   rectangle_render_pipeline: wgpu::RenderPipeline,
   fs_tree: fs_tree::FsTree,
+  pub font_height: f32,
   pub code_views: code_view_tabs::CodeViewTabs,
 }
 
@@ -84,15 +85,18 @@ impl Renderer {
     let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(font.clone())
       .build(&device, RENDER_FORMAT);
 
+    // 20% for window for file tree
+    let tree_width = (size.width as f32 / 100.0) * 20.0;
+
     let mut code_views = code_view_tabs::CodeViewTabs::new(
       &device,
       size.cast(),
       font,
       font_height,
       Dimensions {
-        x: 400.0,
+        x: tree_width,
         y: 0.0,
-        width: size.width as f32 - 400.0,
+        width: size.width as f32 - tree_width,
         height: size.height as f32,
       },
     );
@@ -106,7 +110,7 @@ impl Renderer {
       Dimensions {
         x: 0.0,
         y: 0.0,
-        width: 400.0,
+        width: tree_width,
         height: size.height as f32,
       },
       path,
@@ -126,6 +130,7 @@ impl Renderer {
       glyph_brush,
       rectangle_render_pipeline,
       fs_tree,
+      font_height,
       code_views,
     })
   }
@@ -198,8 +203,8 @@ impl Renderer {
     {
       let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: None,
-        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-          attachment: &frame.view,
+        color_attachments: &[wgpu::RenderPassColorAttachment {
+          view: &frame.view,
           resolve_target: None,
           ops: wgpu::Operations {
             load: wgpu::LoadOp::Clear(wgpu::Color {

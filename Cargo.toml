@@ -13,8 +13,7 @@ futures = "0.3.15"
 shellexpand = "2.1.0"
 bytemuck = { version = "1.7.0", features = [ "derive" ] }
 unicode-segmentation = "1.8.0"
-tree-sitter = "0.19.5"
 
-[build-dependencies]
-anyhow = "1.0.42"
-cc = "1.0.69"
+# tree-sitter
+tree-sitter-highlight = "=0.19.0"
+tree-sitter-rust = "=0.19.0"

@@ -3,29 +3,46 @@ use super::super::rectangle::Rectangle;
 use crate::renderer::Dimensions;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
-use tree_sitter::Language;
+use tree_sitter_highlight::{HighlightEvent, Highlighter};
 use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{GlyphPositioner, Layout, Section, SectionGeometry, Text};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::VirtualKeyCode;
 
-extern "C" {
-  fn tree_sitter_rust() -> Language;
-}
-
 pub struct Code {
   font: FontArc,
-  #[allow(dead_code)]
-  tree_sitter_parser: tree_sitter::Parser,
-  #[allow(dead_code)]
-  tree_sitter_tree: tree_sitter::Tree,
   font_height: f32,
   text: Rc<RefCell<Vec<String>>>,
   scroll_offset: PhysicalPosition<f64>,
   cursor: Cursor,
   max_line_length: f32,
   pub dimensions: Dimensions,
+  highlight_config: tree_sitter_highlight::HighlightConfiguration,
+  highlights: Vec<(usize, usize, Option<usize>)>,
 }
+
+const HIGHLIGHT_NAMES: [&str; 20] = [
+  "constant",
+  "constant.builtin",
+  "type",
+  "type.builtin",
+  "constructor",
+  "function",
+  "function.method",
+  "function.macro",
+  "property",
+  "comment",
+  "punctuation.bracket",
+  "punctuation.delimiter",
+  "variable.parameter",
+  "variable.builtin",
+  "label",
+  "keyword",
+  "string",
+  "escape",
+  "attribute",
+  "operator",
+];
 
 impl Code {
   fn generate_glyph_text<'r>(
@@ -70,27 +87,66 @@ impl Code {
     let max_line_length =
       max_line_length(&text.borrow(), font.clone(), font_height);
 
-    let mut tree_sitter_parser = tree_sitter::Parser::new();
-    let language = unsafe { tree_sitter_rust() };
-    tree_sitter_parser.set_language(language).unwrap();
+    // TODO: language specific handling
+    let mut highlight_config =
+      tree_sitter_highlight::HighlightConfiguration::new(
+        tree_sitter_rust::language(),
+        tree_sitter_rust::HIGHLIGHT_QUERY,
+        "",
+        "",
+      )
+      .unwrap();
 
-    let parse_text: Vec<u8> =
-      text.borrow().iter().fold(vec![], |mut vec, line| {
-        vec.extend_from_slice(line.as_bytes());
-        vec
-      });
-    let tree_sitter_tree = tree_sitter_parser.parse(parse_text, None).unwrap();
+    highlight_config.names();
+
+    highlight_config.configure(
+      &HIGHLIGHT_NAMES
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>(),
+    );
 
     Self {
       font,
-      tree_sitter_parser,
-      tree_sitter_tree,
       font_height,
       text,
       scroll_offset: PhysicalPosition { x: 0.0, y: 0.0 },
       cursor,
       max_line_length,
       dimensions,
+      highlight_config,
+      highlights: vec![],
+    }
+  }
+
+  fn generate_highlighting(&mut self) {
+    let mut highlighter = Highlighter::new();
+    let vec = Ref::map(self.text.borrow(), |v| v[..].as_ref());
+    let text: String = vec.join("\n");
+    let highlights = highlighter
+      .highlight(&self.highlight_config, text.as_bytes(), None, |_| None)
+      .unwrap();
+
+    self.highlights.clear();
+    let mut current_range = (0, 0);
+    let mut current_highlight = None;
+    for event in highlights {
+      match event.unwrap() {
+        HighlightEvent::Source { start, end } => {
+          current_range = (start, end);
+        }
+        HighlightEvent::HighlightStart(s) => {
+          current_highlight = Some(s.0);
+        }
+        HighlightEvent::HighlightEnd => {
+          self.highlights.push((
+            current_range.0,
+            current_range.1,
+            current_highlight,
+          ));
+          current_highlight = None;
+        }
+      }
     }
   }
 }
@@ -114,6 +170,7 @@ impl super::super::input::TextInput for Code {
       },
       self.scroll_offset.cast(),
     );
+    self.generate_highlighting();
   }
 
   fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
@@ -130,6 +187,7 @@ impl super::super::input::TextInput for Code {
       },
       self.scroll_offset.cast(),
     );
+    self.generate_highlighting();
   }
 }
 

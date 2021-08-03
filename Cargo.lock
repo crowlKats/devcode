@@ -438,10 +438,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytemuck",
- "cc",
  "futures",
  "shellexpand",
- "tree-sitter",
+ "tree-sitter-highlight",
+ "tree-sitter-rust",
  "unicode-segmentation",
  "wgpu",
  "wgpu_glyph",
@@ -1813,12 +1813,32 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter"
-version = "0.19.5"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad726ec26496bf4c083fff0f43d4eb3a2ad1bba305323af5ff91383c0b6ecac0"
+checksum = "fc3972f6905e38d3fbc1da487d2554807674c46108226bc23e0f50db377a9690"
 dependencies = [
  "cc",
  "regex",
+]
+
+[[package]]
+name = "tree-sitter-highlight"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d2c0933155d05de067b1102322930e2aa0a8084348b5e71c9cb037aae8d77d9"
+dependencies = [
+ "regex",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-rust"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "784f7ef9cdbd4c895dc2d4bb785e95b4a5364a602eec803681db83d1927ddf15"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]

@@ -63,7 +63,7 @@ impl CodeViewTabs {
     if !filepath.is_file() {
       anyhow::bail!("path isn't a file");
     }
-    let text = std::fs::read_to_string(&filepath)?;
+    let text = ropey::Rope::from_reader(std::fs::File::open(&filepath)?)?;
 
     let filename = filepath.file_name().unwrap().to_str().unwrap();
     let name_width = line_length(filename, self.font.clone(), self.font_height);

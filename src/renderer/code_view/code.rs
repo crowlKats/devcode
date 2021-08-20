@@ -1,7 +1,7 @@
 use super::super::input::{max_line_length, Cursor};
 use super::super::rectangle::Rectangle;
 use crate::renderer::Dimensions;
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 use wgpu_glyph::ab_glyph::FontArc;
 use wgpu_glyph::{GlyphPositioner, Layout, Section, SectionGeometry, Text};
@@ -21,13 +21,15 @@ pub struct Code {
 impl Code {
   fn generate_glyph_text<'r>(
     &self,
-    text: &'r Ref<'_, impl Iterator<Item = ropey::RopeSlice<'r>>>,
+    text: impl Iterator<Item = ropey::RopeSlice<'r>>,
   ) -> Vec<Text<'r>> {
     text
-      .map(|s| {
-        Text::new(s.as_str().unwrap())
-          .with_color([0.9, 0.9, 0.9, 1.0])
-          .with_scale(self.font_height)
+      .flat_map(|s| {
+        s.chunks().map(|c| {
+          Text::new(c)
+            .with_color([0.9, 0.9, 0.9, 1.0])
+            .with_scale(self.font_height)
+        })
       })
       .collect()
   }
@@ -53,13 +55,10 @@ impl Code {
     );
 
     let max_line_length = max_line_length(
-      text
-        .borrow()
-        .lines()
-        .map(|s| s.as_str().unwrap().to_string()),
+      text.borrow().lines().map(|s| s.to_string()),
       font.clone(),
       font_height,
-    ); // TODO
+    );
 
     Self {
       font,
@@ -163,8 +162,8 @@ impl super::super::RenderElement for Code {
   ) {
     let line = ((position.y - self.scroll_offset.y) / self.font_height as f64)
       .floor() as usize;
-    let vec = Ref::map(self.text.borrow(), |rope| &rope.lines_at(line).take(1));
-    let text = self.generate_glyph_text(&vec)[0];
+    let text = self.text.borrow();
+    let lines = self.generate_glyph_text(text.lines_at(line).take(1));
     let layout = Layout::default_wrap();
 
     let section_glyphs = &layout.calculate_glyphs(
@@ -172,7 +171,7 @@ impl super::super::RenderElement for Code {
       &SectionGeometry {
         ..Default::default()
       },
-      &[text],
+      lines.as_slice(),
     );
 
     let mut c = 0;
@@ -204,16 +203,15 @@ impl super::super::RenderElement for Code {
       + (self.dimensions.height / self.font_height).ceil() as usize)
       .min(self.text.borrow().len_lines());
 
-    let lines = Ref::map(self.text.borrow(), |rope| {
-      &rope.lines_at(upper_bound).take(lower_bound - upper_bound)
-    });
+    let text = self.text.borrow();
+    let lines = text.lines_at(upper_bound).take(lower_bound - upper_bound);
     glyph_brush.queue(Section {
       screen_position: (
         self.dimensions.x + self.scroll_offset.x as f32,
         -(((-self.scroll_offset.y as f32) % self.font_height)
           - self.dimensions.y),
       ),
-      text: self.generate_glyph_text(&lines),
+      text: self.generate_glyph_text(lines),
       ..Section::default()
     });
 

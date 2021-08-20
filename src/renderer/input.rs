@@ -85,8 +85,8 @@ pub fn cursor_x_position(
   font_height: f32,
   offset: PhysicalPosition<f32>,
 ) -> Option<f32> {
-  let text =
-    Text::new(text.line(row).as_str().unwrap()).with_scale(font_height);
+  let line = text.line(row).to_string();
+  let text = Text::new(&line).with_scale(font_height);
   let layout = Layout::default_wrap();
 
   let section_glyphs = layout.calculate_glyphs(
@@ -141,7 +141,7 @@ pub fn input_special(
         } else {
           cursor.column = rope.line(cursor.row).len_chars();
           cursor.x_offset =
-            cursor_x_pos(cursor.row, cursor.column).unwrap_or(0.0);
+            cursor_x_pos(cursor.row, cursor.column).unwrap_or_default();
         }
       } else {
         cursor.x_offset = 0.0;
@@ -149,14 +149,19 @@ pub fn input_special(
       }
     }
     VirtualKeyCode::Left => {
-      if cursor.column != 0 {
-        cursor.column -= 1;
-        cursor.x_offset = cursor_x_pos(cursor.row, cursor.column).unwrap();
-      } else if cursor.row != 0 {
-        cursor.row -= 1;
-        cursor.column = rope.line(cursor.row).len_chars();
-        cursor.x_offset =
-          cursor_x_pos(cursor.row, cursor.column).unwrap_or(0.0);
+      match (cursor.row, cursor.column) {
+        (0, 0) => {}
+        (_, 0) => {
+          // TODO: https://github.com/cessen/ropey/issues/44
+          cursor.row -= 1;
+          cursor.column = rope.line(cursor.row).len_chars() - 1;
+          cursor.x_offset =
+            cursor_x_pos(cursor.row, cursor.column).unwrap_or_default();
+        }
+        (_, _) => {
+          cursor.column -= 1;
+          cursor.x_offset = cursor_x_pos(cursor.row, cursor.column).unwrap();
+        }
       }
     }
     VirtualKeyCode::Down => {
@@ -167,12 +172,12 @@ pub fn input_special(
         } else {
           cursor.column = rope.line(cursor.row).len_chars();
           cursor.x_offset =
-            cursor_x_pos(cursor.row, cursor.column).unwrap_or(0.0);
+            cursor_x_pos(cursor.row, cursor.column).unwrap_or_default();
         }
       } else {
         cursor.column = rope.line(cursor.row).len_chars();
         cursor.x_offset =
-          cursor_x_pos(cursor.row, cursor.column).unwrap_or(0.0);
+          cursor_x_pos(cursor.row, cursor.column).unwrap_or_default();
       }
     }
     VirtualKeyCode::Right => {
@@ -233,16 +238,14 @@ pub fn input_char(
     '\u{7f}' => match (cursor.row, cursor.column) {
       (0, 0) => {}
       (row, 0) => {
-        // TODO: proper newline removal
-        cursor.row -= 1;
-        cursor.column = rope.line(row).len_bytes() + 1;
-        let ln = rope.line_to_char(row + 1);
-        rope.remove((ln - 1)..ln);
+        // TODO: https://github.com/cessen/ropey/issues/44
+        let ln = rope.line_to_char(row);
         input_spc(VirtualKeyCode::Left, rope, cursor);
+        rope.remove((ln - 1)..ln);
       }
       (row, column) => {
         let index = rope.line_to_char(row) + column;
-        rope.remove(index..(index + 1));
+        rope.remove((index - 1)..index);
         input_spc(VirtualKeyCode::Left, rope, cursor);
       }
     },
@@ -251,15 +254,15 @@ pub fn input_char(
       rope.insert_char(rope.line_to_char(cursor.row) + cursor.column, '\n');
       input_spc(VirtualKeyCode::Right, rope, cursor);
     }
+    // esc
+    '\u{1b}' => {
+      println!("{:?}", (cursor.row, cursor.column));
+    }
     _ => {
       rope.insert_char(rope.line_to_char(cursor.row) + cursor.column, ch);
       input_spc(VirtualKeyCode::Right, rope, cursor);
     }
   }
 
-  max_line_length(
-    rope.lines().map(|l| l.as_str().unwrap().to_string()),
-    font,
-    font_height,
-  )
+  max_line_length(rope.lines().map(|l| l.to_string()), font, font_height)
 }

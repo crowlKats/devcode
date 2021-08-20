@@ -80,7 +80,7 @@ impl CodeViewTabs {
     );
 
     let code_view = CodeView::new(
-      &device,
+      device,
       screen_size,
       self.font.clone(),
       self.font_height,
@@ -162,7 +162,7 @@ impl super::RenderElement for CodeViewTabs {
           (rect.dimensions.x + TAB_PADDING),
           (TAB_HEIGHT - self.font_height) / 2.0,
         ),
-        text: vec![Text::new(&name)
+        text: vec![Text::new(name)
           .with_color([0.9, 0.9, 0.9, 1.0])
           .with_scale(self.font_height)],
         layout: Layout::default_wrap().h_align(HorizontalAlign::Left),

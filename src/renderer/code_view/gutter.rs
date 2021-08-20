@@ -13,7 +13,7 @@ const GUTTER_MARGIN: f32 = 10.0;
 const GUTTER_PADDING: f32 = 10.0;
 
 pub struct Gutter {
-  text: Rc<RefCell<Vec<String>>>,
+  text: Rc<RefCell<ropey::Rope>>,
   rect: Rectangle,
   pub dimensions: Dimensions,
   scroll_offset_y: f64,
@@ -27,15 +27,11 @@ impl Gutter {
     font_height: f32,
     screen_size: PhysicalSize<f32>,
     dimensions: Dimensions,
-    text: Rc<RefCell<Vec<String>>>,
+    text: Rc<RefCell<ropey::Rope>>,
   ) -> Self {
-    let line_numbers = text
-      .borrow()
-      .iter()
-      .enumerate()
-      .map(|(i, _)| i.to_string())
-      .collect::<Vec<String>>();
-    let line_numbers_width = max_line_length(&line_numbers, font, font_height);
+    let line_numbers =
+      (0..(text.borrow().len_lines() - 1)).map(|i| i.to_string());
+    let line_numbers_width = max_line_length(line_numbers, font, font_height);
 
     let rect_size = line_numbers_width + GUTTER_PADDING;
 
@@ -79,9 +75,9 @@ impl super::super::RenderElement for Gutter {
     offset: PhysicalPosition<f64>,
     _screen_size: PhysicalSize<f32>,
   ) {
-    self.scroll_offset_y = (self.scroll_offset_y + offset.y)
-      .min(0.0)
-      .max(-((self.text.borrow().len() - 3) as f32 * self.font_height) as f64);
+    self.scroll_offset_y = (self.scroll_offset_y + offset.y).min(0.0).max(
+      -((self.text.borrow().len_lines() - 3) as f32 * self.font_height) as f64,
+    );
   }
 
   fn redraw(
@@ -97,11 +93,17 @@ impl super::super::RenderElement for Gutter {
       ((-self.scroll_offset_y) / self.font_height as f64).floor() as usize;
     let lower_bound = (upper_bound
       + (self.dimensions.height / self.font_height).ceil() as usize)
-      .min(self.text.borrow().len());
+      .min(self.text.borrow().len_lines());
 
     let mut line_count = upper_bound;
     let mut line_numbers = String::new();
-    for _ in &self.text.borrow()[upper_bound..lower_bound] {
+    for _ in self
+      .text
+      .borrow()
+      .lines_at(upper_bound)
+      .take(lower_bound - upper_bound)
+    {
+      // TODO
       line_count += 1;
       line_numbers += &format!("{}\n", line_count);
     }

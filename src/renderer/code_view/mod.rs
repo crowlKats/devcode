@@ -11,7 +11,7 @@ mod gutter;
 
 pub struct CodeView {
   #[allow(dead_code)]
-  text: Rc<RefCell<Vec<String>>>,
+  text: Rc<RefCell<ropey::Rope>>,
   gutter: gutter::Gutter,
   code: code::Code,
   pub dimensions: Dimensions,
@@ -24,15 +24,9 @@ impl CodeView {
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
-    text: String,
+    text: ropey::Rope,
   ) -> Self {
-    let mut split_text =
-      text.lines().map(|s| s.to_string()).collect::<Vec<String>>();
-    if text.ends_with('\n') {
-      split_text.push(String::from(""));
-    }
-
-    let text = Rc::new(RefCell::new(split_text));
+    let text = Rc::new(RefCell::new(text));
 
     let gutter = gutter::Gutter::new(
       device,

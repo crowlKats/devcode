@@ -1,7 +1,7 @@
 use super::super::input::{max_line_length, Cursor};
 use super::super::rectangle::Rectangle;
 use crate::renderer::Dimensions;
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 use tree_sitter_highlight::{HighlightEvent, Highlighter};
 use wgpu_glyph::ab_glyph::FontArc;
@@ -12,7 +12,7 @@ use winit::event::VirtualKeyCode;
 pub struct Code {
   font: FontArc,
   font_height: f32,
-  text: Rc<RefCell<Vec<String>>>,
+  text: Rc<RefCell<ropey::Rope>>,
   scroll_offset: PhysicalPosition<f64>,
   cursor: Cursor,
   max_line_length: f32,
@@ -47,19 +47,15 @@ const HIGHLIGHT_NAMES: [&str; 20] = [
 impl Code {
   fn generate_glyph_text<'r>(
     &self,
-    text: &'r Ref<'_, [String]>,
+    text: impl Iterator<Item = ropey::RopeSlice<'r>>,
   ) -> Vec<Text<'r>> {
     text
-      .iter()
       .flat_map(|s| {
-        std::iter::once(
-          Text::new(s)
+        s.chunks().map(|c| {
+          Text::new(c)
             .with_color([0.9, 0.9, 0.9, 1.0])
-            .with_scale(self.font_height),
-        )
-        .chain(std::iter::once(
-          Text::new("\n").with_scale(self.font_height),
-        ))
+            .with_scale(self.font_height)
+        })
       })
       .collect()
   }
@@ -70,7 +66,7 @@ impl Code {
     font: FontArc,
     font_height: f32,
     dimensions: Dimensions,
-    text: Rc<RefCell<Vec<String>>>,
+    text: Rc<RefCell<ropey::Rope>>,
   ) -> Self {
     let cursor = Cursor::new(
       device,
@@ -84,8 +80,11 @@ impl Code {
       Some(dimensions.into()),
     );
 
-    let max_line_length =
-      max_line_length(&text.borrow(), font.clone(), font_height);
+    let max_line_length = max_line_length(
+      text.borrow().lines().map(|s| s.to_string()),
+      font.clone(),
+      font_height,
+    );
 
     // TODO: language specific handling
     let mut highlight_config =
@@ -217,7 +216,8 @@ impl super::super::RenderElement for Code {
         .min(0.0);
     } else {
       self.scroll_offset.y = (self.scroll_offset.y + offset.y).min(0.0).max(
-        -((self.text.borrow().len() - 3) as f32 * self.font_height) as f64,
+        -((self.text.borrow().len_lines() - 3) as f32 * self.font_height)
+          as f64,
       );
     }
 
@@ -242,8 +242,8 @@ impl super::super::RenderElement for Code {
   ) {
     let line = ((position.y - self.scroll_offset.y) / self.font_height as f64)
       .floor() as usize;
-    let vec = Ref::map(self.text.borrow(), |v| v[line..line + 1].as_ref());
-    let text = self.generate_glyph_text(&vec)[0];
+    let text = self.text.borrow();
+    let lines = self.generate_glyph_text(text.lines_at(line).take(1));
     let layout = Layout::default_wrap();
 
     let section_glyphs = &layout.calculate_glyphs(
@@ -251,7 +251,7 @@ impl super::super::RenderElement for Code {
       &SectionGeometry {
         ..Default::default()
       },
-      &[text],
+      lines.as_slice(),
     );
 
     let mut c = 0;
@@ -281,17 +281,17 @@ impl super::super::RenderElement for Code {
       ((-self.scroll_offset.y) / self.font_height as f64).floor() as usize;
     let lower_bound = (upper_bound
       + (self.dimensions.height / self.font_height).ceil() as usize)
-      .min(self.text.borrow().len());
+      .min(self.text.borrow().len_lines());
 
-    let vec =
-      Ref::map(self.text.borrow(), |v| v[upper_bound..lower_bound].as_ref());
+    let text = self.text.borrow();
+    let lines = text.lines_at(upper_bound).take(lower_bound - upper_bound);
     glyph_brush.queue(Section {
       screen_position: (
         self.dimensions.x + self.scroll_offset.x as f32,
         -(((-self.scroll_offset.y as f32) % self.font_height)
           - self.dimensions.y),
       ),
-      text: self.generate_glyph_text(&vec),
+      text: self.generate_glyph_text(lines),
       ..Section::default()
     });
 

@@ -19,9 +19,9 @@ pub struct Renderer {
   pub window: winit::window::Window,
   pub size: PhysicalSize<u32>,
   surface: wgpu::Surface,
+  surface_config: wgpu::SurfaceConfiguration,
   device: wgpu::Device,
   queue: wgpu::Queue,
-  swap_chain: wgpu::SwapChain,
   staging_belt: wgpu::util::StagingBelt,
   local_spawner: futures::executor::LocalSpawner,
   local_pool: futures::executor::LocalPool,
@@ -42,7 +42,7 @@ impl Renderer {
       .with_title(env!("CARGO_CRATE_NAME"))
       .build(event_loop)
       .unwrap();
-    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
 
     let surface = unsafe { instance.create_surface(&window) };
     let adapter = instance
@@ -62,16 +62,14 @@ impl Renderer {
     let local_spawner = local_pool.spawner();
 
     let size = window.inner_size();
-    let swap_chain = device.create_swap_chain(
-      &surface,
-      &wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-        format: RENDER_FORMAT,
-        width: size.width,
-        height: size.height,
-        present_mode: wgpu::PresentMode::Mailbox,
-      },
-    );
+    let surface_config = wgpu::SurfaceConfiguration {
+      usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+      format: RENDER_FORMAT,
+      width: size.width,
+      height: size.height,
+      present_mode: wgpu::PresentMode::Mailbox,
+    };
+    surface.configure(&device, &surface_config);
 
     let px_per_em = (10.0 / 72.0) * (96.0 * window.scale_factor() as f32);
     let units_per_em = font.units_per_em().unwrap();
@@ -121,9 +119,9 @@ impl Renderer {
       window,
       size,
       surface,
+      surface_config,
       device,
       queue,
-      swap_chain,
       staging_belt,
       local_spawner,
       local_pool,
@@ -138,16 +136,9 @@ impl Renderer {
   pub fn resize(&mut self, size: PhysicalSize<f32>) {
     self.size = size.cast();
 
-    self.swap_chain = self.device.create_swap_chain(
-      &self.surface,
-      &wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-        format: RENDER_FORMAT,
-        width: self.size.width,
-        height: self.size.height,
-        present_mode: wgpu::PresentMode::Mailbox,
-      },
-    );
+    self.surface_config.width = self.size.width;
+    self.surface_config.height = self.size.height;
+    self.surface.configure(&self.device, &self.surface_config);
 
     for element in self.get_elements() {
       element.resize(size);
@@ -198,13 +189,15 @@ impl Renderer {
           label: Some("Redraw"),
         });
 
-    let frame = self.swap_chain.get_current_frame()?.output;
-
+    let frame = self.surface.get_current_frame()?.output;
+    let view = frame
+      .texture
+      .create_view(&wgpu::TextureViewDescriptor::default());
     {
       let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: None,
         color_attachments: &[wgpu::RenderPassColorAttachment {
-          view: &frame.view,
+          view: &view,
           resolve_target: None,
           ops: wgpu::Operations {
             load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -242,7 +235,7 @@ impl Renderer {
       &self.device,
       &mut self.staging_belt,
       &mut encoder,
-      &frame.view,
+      &view,
       self.size,
     );
 
@@ -251,7 +244,7 @@ impl Renderer {
       &self.device,
       &mut self.staging_belt,
       &mut encoder,
-      &frame.view,
+      &view,
       self.size,
     );
 

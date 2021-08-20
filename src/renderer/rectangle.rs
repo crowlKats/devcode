@@ -60,7 +60,6 @@ impl Rectangle {
       source: wgpu::ShaderSource::Wgsl(Cow::from(include_str!(
         "./rectangle_shader.wgsl"
       ))),
-      flags: wgpu::ShaderFlags::VALIDATION,
     });
 
     let render_pipeline_layout =
@@ -78,7 +77,7 @@ impl Rectangle {
         entry_point: "vs_main",
         buffers: &[wgpu::VertexBufferLayout {
           array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-          step_mode: wgpu::InputStepMode::Vertex,
+          step_mode: wgpu::VertexStepMode::Vertex,
           attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x3],
         }],
       },
@@ -128,7 +127,7 @@ impl Rectangle {
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Rectangle Vertex Buffer"),
         contents: bytemuck::cast_slice(&vertices),
-        usage: wgpu::BufferUsage::VERTEX | wgpu::BufferUsage::COPY_DST,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
       });
 
     Self {

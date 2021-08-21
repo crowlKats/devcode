@@ -67,9 +67,7 @@ fn main() -> Result<(), anyhow::Error> {
       WindowEvent::KeyboardInput { input, .. } => {
         if input.state == ElementState::Pressed {
           if let Some(keycode) = input.virtual_keycode {
-            ren
-              .code_views
-              .input_special(ren.size.cast(), keycode);
+            ren.code_views.input_special(ren.size.cast(), keycode);
           }
           ren.window.request_redraw();
         }

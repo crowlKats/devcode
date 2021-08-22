@@ -90,6 +90,7 @@ impl CodeViewTabs {
         ..self.dimensions
       },
       text,
+      &filepath,
     );
 
     self

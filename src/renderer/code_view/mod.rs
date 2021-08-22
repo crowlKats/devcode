@@ -1,6 +1,7 @@
 use crate::renderer::rectangle::Rectangle;
 use crate::renderer::Dimensions;
 use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 use wgpu_glyph::ab_glyph::FontArc;
 use winit::dpi::PhysicalSize;
@@ -8,6 +9,7 @@ use winit::event::VirtualKeyCode;
 
 mod code;
 mod gutter;
+mod highlight;
 
 pub struct CodeView {
   #[allow(dead_code)]
@@ -25,6 +27,7 @@ impl CodeView {
     font_height: f32,
     dimensions: Dimensions,
     text: ropey::Rope,
+    path: &Path,
   ) -> Self {
     let text = Rc::new(RefCell::new(text));
 
@@ -48,6 +51,7 @@ impl CodeView {
         ..dimensions
       },
       Rc::clone(&text),
+      highlight::config_from_extension(path.extension()),
     );
 
     Self {

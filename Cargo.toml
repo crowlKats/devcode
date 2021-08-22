@@ -19,4 +19,38 @@ num_enum = "0.5.4"
 # tree-sitter
 tree-sitter = "=0.19.2"
 tree-sitter-highlight = "0.19.2"
+
+tree-sitter-bash = "0.19.0"
+# C missing
+tree-sitter-c-sharp = "0.16.1"
+tree-sitter-cpp = "0.19.0"
+# CSS missing
+# tree-sitter-elm = "5.3.7" conflict with rust
+# Eno missing
+# ERB / EJS missing
+# Fennel missing
+tree-sitter-go = "0.16.0"
+# HTML missing
+tree-sitter-java = "0.19.0"
+tree-sitter-javascript = "0.19.0"
+tree-sitter-lua = "0.0.2"
+# Make missing
+tree-sitter-markdown = "0.7.1"
+tree-sitter-ocaml = "0.19.0"
+# PHP missing
+tree-sitter-python = "0.19.0"
+tree-sitter-ruby = "0.17.0"
 tree-sitter-rust = "0.19.0"
+# R missing
+# S-expressions missing
+# SPARQL missing
+# SystemRDL missing
+# tree-sitter-svelte = "0.8.1" conflict with rust
+# TOML missing
+# Turtle missing
+tree-sitter-typescript = "0.19.0"
+# Verilog missing
+# VHDL missing
+# Vue missing
+# YAML missing
+# WASM missing

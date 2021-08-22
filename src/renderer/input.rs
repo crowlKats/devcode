@@ -255,9 +255,7 @@ pub fn input_char(
       input_spc(VirtualKeyCode::Right, rope, cursor);
     }
     // esc
-    '\u{1b}' => {
-      println!("{:?}", (cursor.row, cursor.column));
-    }
+    '\u{1b}' => {}
     _ => {
       rope.insert_char(rope.line_to_char(cursor.row) + cursor.column, ch);
       input_spc(VirtualKeyCode::Right, rope, cursor);

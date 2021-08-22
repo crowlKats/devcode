@@ -129,7 +129,7 @@ impl FsTree {
     path: PathBuf,
   ) -> Self {
     let rect =
-      Rectangle::new(device, screen_size, dimensions, [0.04, 0.04, 0.04], None);
+      Rectangle::new(device, screen_size, dimensions, [0.2, 0.2, 0.2], None);
 
     let mut ignore_set = HashSet::new();
     ignore_set.insert(OsString::from_str(".DS_Store").unwrap());

@@ -22,7 +22,7 @@ fn main() -> Result<(), anyhow::Error> {
     anyhow::bail!("path isn't a file");
   }
 
-  let font = get_font(args.get(2))?;
+  let font = get_font(std::env::var("DEVCODE_FONT").ok().as_ref())?;
 
   let event_loop = winit::event_loop::EventLoop::new();
   let mut ren = futures::executor::block_on(async {

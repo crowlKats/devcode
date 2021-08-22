@@ -37,7 +37,7 @@ impl CodeViewTabs {
         height: TAB_HEIGHT,
         ..dimensions
       },
-      [0.12, 0.2, 0.89],
+      [0.4, 0.48, 0.92],
       None,
     );
 
@@ -75,7 +75,7 @@ impl CodeViewTabs {
         width: TAB_PADDING + name_width + TAB_PADDING,
         ..self.tabs_container.dimensions
       },
-      [0.04, 0.12, 0.81],
+      [0.25, 0.37, 0.87],
       None,
     );
 

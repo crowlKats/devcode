@@ -42,7 +42,7 @@ impl Gutter {
         width: rect_size,
         ..dimensions
       },
-      [0.5, 0.05, 0.05],
+      [0.68, 0.28, 0.26],
       None,
     );
 

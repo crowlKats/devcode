@@ -436,8 +436,10 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "futures",
+ "num_enum",
  "ropey",
  "shellexpand",
+ "tree-sitter",
  "tree-sitter-highlight",
  "tree-sitter-rust",
  "wgpu",
@@ -1571,9 +1573,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter"
-version = "0.19.5"
+version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad726ec26496bf4c083fff0f43d4eb3a2ad1bba305323af5ff91383c0b6ecac0"
+checksum = "8085411272e5e472f38ed09b911b29ab61979f21cd5fba3454738b85b438ba20"
 dependencies = [
  "cc",
  "regex",
@@ -1581,9 +1583,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-highlight"
-version = "0.19.0"
+version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d2c0933155d05de067b1102322930e2aa0a8084348b5e71c9cb037aae8d77d9"
+checksum = "fb37284ab259e42af1e49fa0f302e3fa93400f2f3921dcfd342b1c833db45970"
 dependencies = [
  "regex",
  "tree-sitter",

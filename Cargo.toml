@@ -20,26 +20,26 @@ num_enum = "0.5.4"
 tree-sitter = "=0.19.2"
 tree-sitter-highlight = "0.19.2"
 
-tree-sitter-bash = "0.19.0"
+# tree-sitter-bash = "0.19.0" doesnt expose HIGHLIGHTS_QUERY
 # C missing
-tree-sitter-c-sharp = "0.16.1"
+# tree-sitter-c-sharp = "0.16.1" outdated
 tree-sitter-cpp = "0.19.0"
 # CSS missing
 # tree-sitter-elm = "5.3.7" conflict with rust
 # Eno missing
 # ERB / EJS missing
 # Fennel missing
-tree-sitter-go = "0.16.0"
+# tree-sitter-go = "0.16.0" outdated
 # HTML missing
 tree-sitter-java = "0.19.0"
 tree-sitter-javascript = "0.19.0"
-tree-sitter-lua = "0.0.2"
+# tree-sitter-lua = "0.0.2" doesnt expose HIGHLIGHTS_QUERY
 # Make missing
-tree-sitter-markdown = "0.7.1"
+# tree-sitter-markdown = "0.7.1" doesnt expose HIGHLIGHTS_QUERY
 tree-sitter-ocaml = "0.19.0"
 # PHP missing
 tree-sitter-python = "0.19.0"
-tree-sitter-ruby = "0.17.0"
+# tree-sitter-ruby = "0.17.0" outdated
 tree-sitter-rust = "0.19.0"
 # R missing
 # S-expressions missing

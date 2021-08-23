@@ -112,11 +112,11 @@ impl super::super::input::TextInput for Code {
       },
       self.scroll_offset.cast(),
     );
-    self
-      .highlight_config
-      .as_mut()
-      .unwrap()
-      .generate(&self.text.borrow()); // TODO: remove, shouldnt generate highglights when moving cursor around
+
+    // TODO: remove, shouldnt generate highglights when moving cursor around
+    if let Some(config) = &mut self.highlight_config {
+      config.generate(&self.text.borrow());
+    }
   }
 
   fn input_char(&mut self, screen_size: PhysicalSize<f32>, ch: char) {
@@ -133,11 +133,10 @@ impl super::super::input::TextInput for Code {
       },
       self.scroll_offset.cast(),
     );
-    self
-      .highlight_config
-      .as_mut()
-      .unwrap()
-      .generate(&self.text.borrow()); // TODO: dont unwrap
+
+    if let Some(config) = &mut self.highlight_config {
+      config.generate(&self.text.borrow());
+    }
   }
 }
 

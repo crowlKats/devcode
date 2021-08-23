@@ -9,6 +9,8 @@ use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
 
 fn main() -> Result<(), anyhow::Error> {
+  env_logger::init();
+
   let args: Vec<String> = std::env::args().collect();
 
   let file = args

@@ -29,28 +29,38 @@ impl Code {
     let start_char = text.line_to_char(start_line);
     let end_char = text.line_to_char(end_line);
 
-    self
-      .highlight_config
-      .as_ref()
-      .unwrap() // TODO: currently text generation depends on highlights, so cant generate text without having highlights. should be opposite
-      .highlights
-      .iter()
-      .enumerate()
-      .skip_while(|(_, (_, end, _))| end <= &start_char)
-      .take_while(|(_, (_, end, _))| end <= &end_char)
-      .flat_map(|(_, (start, end, name))| {
-        text
-          .slice(start.max(&start_char)..end.min(&end_char))
-          .chunks()
-          .map(move |c| {
-            Text::new(c)
-              .with_color(
-                name.map(|n| n.color()).unwrap_or([0.9, 0.9, 0.9, 1.0]),
-              )
+    if let Some(config) = &self.highlight_config {
+      config
+        .highlights
+        .iter()
+        .skip_while(|(_, end, _)| end <= &start_char)
+        .take_while(|(_, end, _)| end <= &end_char)
+        .flat_map(|(start, end, name)| {
+          text
+            .slice(start.max(&start_char)..end.min(&end_char))
+            .chunks()
+            .map(move |c| {
+              Text::new(c)
+                .with_color(
+                  name.map(|n| n.color()).unwrap_or([0.9, 0.9, 0.9, 1.0]),
+                )
+                .with_scale(self.font_height)
+            })
+        })
+        .collect()
+    } else {
+      text
+        .lines_at(start_line)
+        .take(start_line - end_line)
+        .flat_map(|line| {
+          line.chunks().map(|text| {
+            Text::new(text)
+              .with_color([0.9, 0.9, 0.9, 1.0])
               .with_scale(self.font_height)
           })
-      })
-      .collect()
+        })
+        .collect()
+    }
   }
 
   pub fn new(
